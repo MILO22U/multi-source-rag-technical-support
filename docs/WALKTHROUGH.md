@@ -192,48 +192,47 @@ describe exactly these queries.
 
 | # | Query | Intent | Final sources | Top-1 | Conflict → rule | Outcome | Latency |
 |---|---|---|---|---|---|---|---|
-| q01 | What is the maximum payload size for a Zephyr job? | `api_reference` | d5 f2 b1 | #1 (was #2) | `docs_gap` -> `docs_gap_staff_authority`; `misconception` -> `authority_canonical` | answered | 29.64 ms |
-| q02 | Why do my jobs retry forever when the API returns 429? | `troubleshooting` | f4 d4 | #1 (was #1) | `empirical_override` -> `empirical_override`; `contradict` -> `authority_canonical` | answered | 27.14 ms |
-| q03 | Why does Zephyr use exponential backoff instead of fixed delays? | `conceptual` | b4 d3 f1 | #1 (was #1) | `conditional` -> `version_scoping`; `docs_drift` -> `recency_within_tier` | answered | 30.65 ms |
-| q04 | What is the default retry count? | `api_reference` | d5 b2 f1 | #1 (was #9) | `version_drift` -> `version_scoping`; `version_drift` -> `version_scoping` | answered | 25.08 ms |
-| q05 | Can I set timeout=0 to disable the timeout? | `how_to` | d5 f3 | #1 (was #1) | `misconception` -> `authority_canonical` | answered | 25.69 ms |
-| q06 | How do I see the payload of a dead-lettered job from the CLI? | `how_to` | f4 d4 | #1 (was #20) | `docs_gap` -> `docs_gap_staff_authority`; `misconception` -> `authority_canonical`; `misconception` -> `authority_canonical` | answered | 26.37 ms |
-| q07 | I am on v2.4, how do I configure backoff? | `how_to` | b2 d3 | #1 (was #5) | `version_drift` -> `version_scoping`; `version_drift` -> `version_scoping`; `docs_drift` -> `recency_within_tier` | answered | 9.61 ms |
-| q08 | What breaks when I upgrade from v2 to v3? | `version_migration` | d5 b2 f1 | #1 (was #2) | — | answered | 17.64 ms |
-| q09 | Does the Zephyr CLI work on Windows? | `unknown` | b2 d4 f2 | #1 (was #22) | `conditional` -> `version_scoping`; `conditional` -> `version_scoping`; `contradict` -> `authority_canonical` | answered | 29.7 ms |
-| q10 | Why are my jobs landing in the DLQ right after a rate limit? | `troubleshooting` | f4 d4 | #1 (was #3) | `empirical_override` -> `empirical_override`; `empirical_override` -> `empirical_override` | answered | 26.86 ms |
-| q11 | How do I integrate Zephyr with Kubernetes CronJobs? | `how_to` | d5 f3 | #1 (was #5) | `docs_gap` -> `docs_gap_staff_authority` | **REFUSED** | 23.27 ms |
-| q12 | Is Zephyr better than self-hosting Redis? | `opinion` | b5 f3 | #1 (was #1) | `version_drift` -> `version_scoping` | answered | 29.06 ms |
-| q13 | Does the dead-letter queue retry jobs automatically? | `unknown` | d5 b2 f1 | #1 (was #1) | — | answered | 27.9 ms |
-| q14 | What is the default worker concurrency? | `api_reference` | d5 f3 | #1 (was #1) | — | answered | 22.34 ms |
-| q15 | Why is the same job running twice? | `troubleshooting` | f5 b1 d2 | #1 (was #1) | — | answered | 27.18 ms |
+| q01 | What is the maximum payload size for a Zephyr job? | `api_reference` | d5 f2 b1 | #1 (was #2) | `misconception` → `authority_canonical` | answered | 30.25 ms |
+| q02 | Why do my jobs retry forever when the API returns 429? | `troubleshooting` | f4 d4 | #1 (was #1) | `empirical_override` → `empirical_override`; `contradict` → `authority_canonical` | answered | 26.97 ms |
+| q03 | Why does Zephyr use exponential backoff instead of fixed delays? | `conceptual` | b4 d3 f1 | #1 (was #1) | `conditional` → `version_scoping`; `docs_drift` → `recency_within_tier` | answered | 31.81 ms |
+| q04 | What is the default retry count? | `api_reference` | d5 b2 f1 | #1 (was #9) | `version_drift` → `version_scoping`; `version_drift` → `version_scoping` | answered | 25.88 ms |
+| q05 | Can I set timeout=0 to disable the timeout? | `how_to` | d5 f3 | #1 (was #1) | `misconception` → `authority_canonical` | answered | 26.23 ms |
+| q06 | How do I see the payload of a dead-lettered job from the CLI? | `how_to` | f4 d4 | #1 (was #20) | `docs_gap` → `docs_gap_staff_authority`; `misconception` → `authority_canonical`; `misconception` → `authority_canonical` | answered | 27.14 ms |
+| q07 | I am on v2.4, how do I configure backoff? | `how_to` | b2 d3 | #1 (was #5) | `version_drift` → `version_scoping`; `version_drift` → `version_scoping`; `docs_drift` → `recency_within_tier` | answered | 9.58 ms |
+| q08 | What breaks when I upgrade from v2 to v3? | `version_migration` | d5 b2 f1 | #1 (was #2) | — | answered | 19.99 ms |
+| q09 | Does the Zephyr CLI work on Windows? | `unknown` | b2 d4 f2 | #1 (was #22) | `conditional` → `version_scoping`; `conditional` → `version_scoping`; `contradict` → `authority_canonical` | answered | 30.63 ms |
+| q10 | Why are my jobs landing in the DLQ right after a rate limit? | `troubleshooting` | f4 d4 | #1 (was #3) | `empirical_override` → `empirical_override`; `empirical_override` → `empirical_override` | answered | 27.12 ms |
+| q11 | How do I integrate Zephyr with Kubernetes CronJobs? | `how_to` | d5 f3 | #1 (was #5) | — | **REFUSED** | 23.15 ms |
+| q12 | Is Zephyr better than self-hosting Redis? | `opinion` | b5 f3 | #1 (was #1) | `version_drift` → `version_scoping` | answered | 29.77 ms |
+| q13 | Does the dead-letter queue retry jobs automatically? | `unknown` | d5 b2 f1 | #1 (was #1) | — | answered | 29.76 ms |
+| q14 | What is the default worker concurrency? | `api_reference` | d5 f3 | #1 (was #1) | — | answered | 23.14 ms |
+| q15 | Why is the same job running twice? | `troubleshooting` | f5 b1 d2 | #1 (was #1) | — | answered | 28.56 ms |
 *Final-sources column: `d`=docs, `f`=forum, `b`=blog, with how many of the 8
 final slots each filled.*
 
-**Read the Intent column first.** One system classifies these into six different
-intents, and the weights change with the intent — that is requirement 3 in a
-single glance. Then read the Conflict column: nine of the 15 surface a typed
-disagreement, and each one names the rule that resolved it.
+**Read the Intent column first.** One system sorts these into six different
+kinds of question, and the source weights change with the kind — that is
+requirement 3 in a single glance. Then read the Conflict column: each typed
+disagreement names the rule that resolved it.
 
 ## Query by query
 
 ### Q01 — What is the maximum payload size for a Zephyr job?
 
-**Why this one is here.** Canonical lookup. docs weight 1.00 pins the answer to the reference page; a forum post that disagrees is demoted, not deleted.
+**Why this one is here.** Canonical lookup. docs weight 1.00 pins the answer to the reference page, and the community claim of 1 MB is named and rejected.
 
 | | |
 |---|---|
-| intent / area | `api_reference` / `payloads`  |
+| intent / area | `api_reference` / `payloads` |
 | weights applied | docs 1.00 / forum 0.45 / blog 0.35 |
 | candidate pool | 52 |
 | sources in the final 8 | docs 5, forum 2, blog 1 |
-| top-1 chunk | `docs:job-payloads:size-limit` (moved #2 -> #1) |
-| latency | 29.64 ms |
+| top-1 chunk | `docs:job-payloads:size-limit` (moved #2 → #1) |
+| latency | 30.25 ms |
 | run it | app composer, or `python scripts/query.py "What is the maximum payload size for a Zephyr job?" --explain` |
 
 - conflicts:
-  - `docs_gap` on `documentation_coverage` -> resolved by `docs_gap_staff_authority`
-  - `misconception` on `max_payload_bytes` -> resolved by `authority_canonical`
+  - `misconception` on `max_payload_bytes` → resolved by `authority_canonical`
 
 - citations: `docs:job-payloads:size-limit`, `docs:retries-and-backoff:default-retry-policy`, `docs:cli-reference:body`, `forum:t_0058:p2`
 
@@ -245,17 +244,17 @@ disagreement, and each one names the rule that resolved it.
 
 | | |
 |---|---|
-| intent / area | `troubleshooting` / `retries`  |
+| intent / area | `troubleshooting` / `retries` |
 | weights applied | docs 0.65 / forum 1.00 / blog 0.55 |
 | candidate pool | 48 |
 | sources in the final 8 | forum 4, docs 4 |
 | top-1 chunk | `forum:t_0041:p2` (already #1) |
-| latency | 27.14 ms |
+| latency | 26.97 ms |
 | run it | app starter chip **1** |
 
 - conflicts:
-  - `empirical_override` on `retry_after_honoured` -> resolved by `empirical_override`
-  - `contradict` on `retry_after_honoured` -> resolved by `authority_canonical`
+  - `empirical_override` on `retry_after_honoured` → resolved by `empirical_override`
+  - `contradict` on `retry_after_honoured` → resolved by `authority_canonical`
 
 - citations: `forum:t_0041:p2`, `docs:retries-and-backoff:timeouts`, `docs:rate-limits:quotas`, `docs:rate-limits:how-the-sdk-handles-429`
 
@@ -263,21 +262,21 @@ disagreement, and each one names the rule that resolved it.
 
 ### Q03 — Why does Zephyr use exponential backoff instead of fixed delays?
 
-**Why this one is here.** Conceptual "why" -> the blog wins (1.00) over docs (0.70). Rationale is written in blog posts, not reference pages.
+**Why this one is here.** Conceptual "why" → the blog wins (1.00) over docs (0.70). Rationale is written in blog posts, not reference pages.
 
 | | |
 |---|---|
-| intent / area | `conceptual` / `retries`  |
+| intent / area | `conceptual` / `retries` |
 | weights applied | docs 0.70 / forum 0.45 / blog 1.00 |
 | candidate pool | 53 |
 | sources in the final 8 | blog 4, docs 3, forum 1 |
 | top-1 chunk | `blog:why-exponential-backoff:w0` (already #1) |
-| latency | 30.65 ms |
+| latency | 31.81 ms |
 | run it | app starter chip **5** |
 
 - conflicts:
-  - `conditional` on `retry_after_honoured` -> resolved by `version_scoping`
-  - `docs_drift` on `retry_after_honoured` -> resolved by `recency_within_tier`
+  - `conditional` on `retry_after_honoured` → resolved by `version_scoping`
+  - `docs_drift` on `retry_after_honoured` → resolved by `recency_within_tier`
 
 - citations: `blog:why-exponential-backoff:w0`, `docs:migration-v2-to-v3:body`, `docs:changelog:v3-1-2026-04-22`, `blog:v3-launch:w0`
 
@@ -285,21 +284,21 @@ disagreement, and each one names the rule that resolved it.
 
 ### Q04 — What is the default retry count?
 
-**Why this one is here.** Version drift: the default changed in v3.0. Resolved by version_scoping, so the answer states the current value and names the change. (planted conflict **C1**)
+**Why this one is here.** Version drift: the default changed in v3.0. Resolved by version_scoping, so the answer states the current value and names the change. **Known weakness:** the top-1 chunk is misranked here; the right passage is #2. (planted conflict **C1**)
 
 | | |
 |---|---|
-| intent / area | `api_reference` / `retries`  |
+| intent / area | `api_reference` / `retries` |
 | weights applied | docs 1.00 / forum 0.45 / blog 0.35 |
 | candidate pool | 42 |
 | sources in the final 8 | docs 5, blog 2, forum 1 |
-| top-1 chunk | `docs:job-payloads:size-limit` (moved #9 -> #1) |
-| latency | 25.08 ms |
+| top-1 chunk | `docs:job-payloads:size-limit` (moved #9 → #1) |
+| latency | 25.88 ms |
 | run it | app composer, or `python scripts/query.py "What is the default retry count?" --explain` |
 
 - conflicts:
-  - `version_drift` on `max_retries_default` -> resolved by `version_scoping`
-  - `version_drift` on `visibility_timeout_default` -> resolved by `version_scoping`
+  - `version_drift` on `max_retries_default` → resolved by `version_scoping`
+  - `version_drift` on `visibility_timeout_default` → resolved by `version_scoping`
 
 - citations: `docs:job-payloads:size-limit`, `docs:retries-and-backoff:default-retry-policy`, `blog:scaling-to-1m-jobs:w1`, `docs:self-hosted-agents:agent-concurrency-defaults`
 
@@ -311,41 +310,41 @@ disagreement, and each one names the rule that resolved it.
 
 | | |
 |---|---|
-| intent / area | `how_to` / `timeouts`  |
+| intent / area | `how_to` / `timeouts` |
 | weights applied | docs 0.90 / forum 0.70 / blog 0.60 |
 | candidate pool | 47 |
 | sources in the final 8 | docs 5, forum 3 |
 | top-1 chunk | `docs:retries-and-backoff:timeouts` (already #1) |
-| latency | 25.69 ms |
+| latency | 26.23 ms |
 | run it | app starter chip **3** |
 
 - conflicts:
-  - `misconception` on `timeout_zero_semantics` -> resolved by `authority_canonical`
+  - `misconception` on `timeout_zero_semantics` → resolved by `authority_canonical`
 
-- citations: `docs:retries-and-backoff:timeouts`, `forum:t_0007:p2`, `forum:t_0007:p3`, `docs:retries-and-backoff:configuring-backoff`
+- citations: `docs:retries-and-backoff:timeouts`, `forum:t_0007:p2`, `forum:t_0007:p3`, `docs:retries-and-backoff:default-retry-policy`
 
 > **Documentation — Retries and backoff (v3.2):** timeout bounds how long a single attempt may run before the worker is considered to have failed. **timeout=0 means fail-fast: the job fails immediately on its first attempt and is retried according to the retry p…
 
 ### Q06 — How do I see the payload of a dead-lettered job from the CLI?
 
-**Why this one is here.** The reranking showpiece: the correct answer was #20 after stage 1 and #1 after the cross-encoder. Also a docs_gap -- an undocumented CLI flag only the forum knows. (planted conflict **C3**)
+**Why this one is here.** The reranking showpiece: the correct answer was #20 after stage 1 and #1 after the cross-encoder. Also a docs_gap — an undocumented CLI flag only the forum knows. (planted conflict **C3**)
 
 | | |
 |---|---|
-| intent / area | `how_to` / `dlq`  |
+| intent / area | `how_to` / `dlq` |
 | weights applied | docs 0.90 / forum 0.70 / blog 0.60 |
 | candidate pool | 50 |
 | sources in the final 8 | forum 4, docs 4 |
-| top-1 chunk | `forum:t_0012:p2` (moved #20 -> #1) |
-| latency | 26.37 ms |
+| top-1 chunk | `forum:t_0012:p2` (moved #20 → #1) |
+| latency | 27.14 ms |
 | run it | app starter chip **2** |
 
 - conflicts:
-  - `docs_gap` on `documentation_coverage` -> resolved by `docs_gap_staff_authority`
-  - `misconception` on `dlq_auto_replay` -> resolved by `authority_canonical`
-  - `misconception` on `dlq_auto_replay` -> resolved by `authority_canonical`
+  - `docs_gap` on `documentation_coverage` → resolved by `docs_gap_staff_authority`
+  - `misconception` on `dlq_auto_replay` → resolved by `authority_canonical`
+  - `misconception` on `dlq_auto_replay` → resolved by `authority_canonical`
 
-- citations: `forum:t_0012:p2`, `forum:t_0061:p2`, `docs:retries-and-backoff:timeouts`, `forum:t_0031:p3`
+- citations: `forum:t_0012:p2`, `forum:t_0061:p2`, `forum:t_0031:p3`, `docs:quickstart:body`
 
 > **Forum — accepted answer by staff, 29 votes:** QUESTION: Can I see the payload of a dead-lettered job from the CLI? zephyr dlq list gives me the job id, attempt count and error class, but not the payload. ANSWER (staff, accepted, 29 votes): There is an undocu…
 
@@ -355,18 +354,18 @@ disagreement, and each one names the rule that resolved it.
 
 | | |
 |---|---|
-| intent / area | `how_to` / `retries` · version `2.4` |
+| intent / area | `how_to` / `retries` — version `2.4` |
 | weights applied | docs 0.90 / forum 0.70 / blog 0.60 |
 | candidate pool | 5 |
 | sources in the final 8 | blog 2, docs 3 |
-| top-1 chunk | `blog:scaling-to-1m-jobs:w0` (moved #5 -> #1) |
-| latency | 9.61 ms |
+| top-1 chunk | `blog:scaling-to-1m-jobs:w0` (moved #5 → #1) |
+| latency | 9.58 ms |
 | run it | app composer, or `python scripts/query.py "I am on v2.4, how do I configure backoff?" --explain` |
 
 - conflicts:
-  - `version_drift` on `auth_header` -> resolved by `version_scoping`
-  - `version_drift` on `auth_header` -> resolved by `version_scoping`
-  - `docs_drift` on `retry_after_honoured` -> resolved by `recency_within_tier`
+  - `version_drift` on `auth_header` → resolved by `version_scoping`
+  - `version_drift` on `auth_header` → resolved by `version_scoping`
+  - `docs_drift` on `retry_after_honoured` → resolved by `recency_within_tier`
 
 - citations: `blog:scaling-to-1m-jobs:w1`, `docs:changelog:v3-0-2026-01-15`, `docs:migration-v2-to-v3:body`
 
@@ -378,18 +377,18 @@ disagreement, and each one names the rule that resolved it.
 
 | | |
 |---|---|
-| intent / area | `version_migration` / `migration`  |
+| intent / area | `version_migration` / `migration` |
 | weights applied | docs 0.95 / forum 0.70 / blog 0.75 |
 | candidate pool | 17 |
 | sources in the final 8 | docs 5, blog 2, forum 1 |
-| top-1 chunk | `docs:migration-v2-to-v3:body` (moved #2 -> #1) |
-| latency | 17.64 ms |
+| top-1 chunk | `docs:migration-v2-to-v3:body` (moved #2 → #1) |
+| latency | 19.99 ms |
 | run it | app composer, or `python scripts/query.py "What breaks when I upgrade from v2 to v3?" --explain` |
 
 - conflicts:
   - none fired
 
-- citations: `docs:migration-v2-to-v3:body`, `docs:quickstart:body`, `docs:dead-letter-queue:what-lands-in-the-dlq`
+- citations: `docs:migration-v2-to-v3:body`, `blog:v3-launch:w0`, `docs:changelog:v3-0-2026-01-15`, `blog:why-exponential-backoff:w0`
 
 > **Documentation — Migrating from v2 to v3 (v3.2):** This is the single most common upgrade failure, and it looks like a revoked key rather than a header problem. 2. Handlers that reliably took 40 seconds under v2 now exceed the default and get redelivered, whi…
 
@@ -399,18 +398,18 @@ disagreement, and each one names the rule that resolved it.
 
 | | |
 |---|---|
-| intent / area | `unknown` / `cli`  |
+| intent / area | `unknown` / `cli` |
 | weights applied | docs 0.85 / forum 0.70 / blog 0.70 |
 | candidate pool | 51 |
 | sources in the final 8 | blog 2, docs 4, forum 2 |
-| top-1 chunk | `blog:windows-support-lands:w0` (moved #22 -> #1) |
-| latency | 29.7 ms |
+| top-1 chunk | `blog:windows-support-lands:w0` (moved #22 → #1) |
+| latency | 30.63 ms |
 | run it | app composer, or `python scripts/query.py "Does the Zephyr CLI work on Windows?" --explain` |
 
 - conflicts:
-  - `conditional` on `windows_cli_support` -> resolved by `version_scoping`
-  - `conditional` on `windows_cli_support` -> resolved by `version_scoping`
-  - `contradict` on `windows_cli_support` -> resolved by `authority_canonical`
+  - `conditional` on `windows_cli_support` → resolved by `version_scoping`
+  - `conditional` on `windows_cli_support` → resolved by `version_scoping`
+  - `contradict` on `windows_cli_support` → resolved by `authority_canonical`
 
 - citations: `blog:windows-support-lands:w0`, `docs:changelog:v3-1-2026-04-22`, `docs:dead-letter-queue:replay-is-manual`, `forum:t_0019:p2`
 
@@ -422,38 +421,38 @@ disagreement, and each one names the rule that resolved it.
 
 | | |
 |---|---|
-| intent / area | `troubleshooting` / `rate_limits`  |
+| intent / area | `troubleshooting` / `rate_limits` |
 | weights applied | docs 0.65 / forum 1.00 / blog 0.55 |
 | candidate pool | 50 |
 | sources in the final 8 | forum 4, docs 4 |
-| top-1 chunk | `forum:t_0041:p2` (moved #3 -> #1) |
-| latency | 26.86 ms |
+| top-1 chunk | `forum:t_0041:p2` (moved #3 → #1) |
+| latency | 27.12 ms |
 | run it | app composer, or `python scripts/query.py "Why are my jobs landing in the DLQ right after a rate limit?" --explain` |
 
 - conflicts:
-  - `empirical_override` on `retry_after_honoured` -> resolved by `empirical_override`
-  - `empirical_override` on `retry_after_honoured` -> resolved by `empirical_override`
+  - `empirical_override` on `retry_after_honoured` → resolved by `empirical_override`
+  - `empirical_override` on `retry_after_honoured` → resolved by `empirical_override`
 
-- citations: `forum:t_0041:p2`, `forum:t_0052:p2`, `docs:rate-limits:quotas`, `forum:t_0031:p3`
+- citations: `forum:t_0041:p2`, `forum:t_0052:p2`, `docs:changelog:v3-1-2026-04-22`, `docs:dead-letter-queue:what-lands-in-the-dlq`
 
 > **Forum — accepted answer by mvp, 63 votes:** Jobs retry in a tight loop, burn through all 5 attempts in well under a minute, and land in the DLQ. The 429 responses clearly carry Retry-After: 30, so I expected the SDK to wait 30 seconds between attempts. The d…
 
 ### Q11 — How do I integrate Zephyr with Kubernetes CronJobs?
 
-**Why this one is here.** Out of scope. 0% term coverage -> refuses instead of assembling a plausible answer from loosely related passages.
+**Why this one is here.** Out of scope. 0% term coverage → refuses instead of assembling a plausible answer from loosely related passages.
 
 | | |
 |---|---|
-| intent / area | `how_to` / `None`  |
+| intent / area | `how_to` / `None` |
 | weights applied | docs 0.90 / forum 0.70 / blog 0.60 |
 | candidate pool | 52 |
 | sources in the final 8 | docs 5, forum 3 |
-| top-1 chunk | `docs:cli-reference:body` (moved #5 -> #1) |
-| latency | 23.27 ms |
+| top-1 chunk | `docs:cli-reference:body` (moved #5 → #1) |
+| latency | 23.15 ms |
 | run it | app starter chip **6** |
 
 - conflicts:
-  - `docs_gap` on `documentation_coverage` -> resolved by `docs_gap_staff_authority`
+  - none fired
   - plus 1 pair(s) classified non-conflicting (no warning raised)
 - citations: — (refused)
 
@@ -465,16 +464,16 @@ disagreement, and each one names the rule that resolved it.
 
 | | |
 |---|---|
-| intent / area | `opinion` / `None`  |
+| intent / area | `opinion` / `None` |
 | weights applied | docs 0.30 / forum 0.85 / blog 0.95 |
 | candidate pool | 52 |
 | sources in the final 8 | blog 5, forum 3 |
 | top-1 chunk | `blog:queue-vs-self-hosted:w0` (already #1) |
-| latency | 29.06 ms |
+| latency | 29.77 ms |
 | run it | app composer, or `python scripts/query.py "Is Zephyr better than self-hosting Redis?" --explain` |
 
 - conflicts:
-  - `version_drift` on `auth_header` -> resolved by `version_scoping`
+  - `version_drift` on `auth_header` → resolved by `version_scoping`
 
 - citations: `blog:queue-vs-self-hosted:w0`, `blog:scaling-to-1m-jobs:w1`, `blog:v3-launch:w0`
 
@@ -482,16 +481,16 @@ disagreement, and each one names the rule that resolved it.
 
 ### Q13 — Does the dead-letter queue retry jobs automatically?
 
-**Why this one is here.** Negated phrasing ("automatically?") answered correctly: replay is manual. The planted misconception C12 is not repeated. (planted conflict **C12**)
+**Why this one is here.** Negated phrasing ("automatically?") answered correctly: replay is manual. **Known weakness:** top-1 is misranked; the right passage is #2. (planted conflict **C12**)
 
 | | |
 |---|---|
-| intent / area | `unknown` / `retries`  |
+| intent / area | `unknown` / `retries` |
 | weights applied | docs 0.85 / forum 0.70 / blog 0.70 |
 | candidate pool | 48 |
 | sources in the final 8 | docs 5, blog 2, forum 1 |
 | top-1 chunk | `docs:retries-and-backoff:timeouts` (already #1) |
-| latency | 27.9 ms |
+| latency | 29.76 ms |
 | run it | app composer, or `python scripts/query.py "Does the dead-letter queue retry jobs automatically?" --explain` |
 
 - conflicts:
@@ -503,16 +502,16 @@ disagreement, and each one names the rule that resolved it.
 
 ### Q14 — What is the default worker concurrency?
 
-**Why this one is here.** The zero-false-positive case: 10 vs CPU count are both true for different components. Classified complementary, THREE pairs considered, no warning raised. (planted conflict **C11**)
+**Why this one is here.** The zero-false-positive case: 10 vs CPU count are both true for different components. Classified complementary, three pairs considered, no warning raised. (planted conflict **C11**)
 
 | | |
 |---|---|
-| intent / area | `api_reference` / `concurrency`  |
+| intent / area | `api_reference` / `concurrency` |
 | weights applied | docs 1.00 / forum 0.45 / blog 0.35 |
 | candidate pool | 38 |
 | sources in the final 8 | docs 5, forum 3 |
 | top-1 chunk | `docs:concurrency-and-workers:managed-worker-concurrency` (already #1) |
-| latency | 22.34 ms |
+| latency | 23.14 ms |
 | run it | app starter chip **4** |
 
 - conflicts:
@@ -524,16 +523,16 @@ disagreement, and each one names the rule that resolved it.
 
 ### Q15 — Why is the same job running twice?
 
-**Why this one is here.** Troubleshooting with no conflict: forum 5 of 8 slots, idempotency + visibility timeout joined.
+**Why this one is here.** Troubleshooting with no conflict: forum fills most of the final slots, idempotency and visibility timeout joined.
 
 | | |
 |---|---|
-| intent / area | `troubleshooting` / `None`  |
+| intent / area | `troubleshooting` / `None` |
 | weights applied | docs 0.65 / forum 1.00 / blog 0.55 |
 | candidate pool | 48 |
 | sources in the final 8 | forum 5, blog 1, docs 2 |
 | top-1 chunk | `forum:t_0049:p2` (already #1) |
-| latency | 27.18 ms |
+| latency | 28.56 ms |
 | run it | app composer, or `python scripts/query.py "Why is the same job running twice?" --explain` |
 
 - conflicts:

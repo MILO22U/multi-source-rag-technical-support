@@ -95,7 +95,7 @@ class ContradictionEngine:
             b = by_id.get(finding.chunk_b_id)
             if a is None or b is None:
                 continue
-            if not self._relevant_to_query(finding, analysis, rank):
+            if not self._relevant_to_query(finding, analysis, rank, by_id):
                 continue
             seen.add(key)
             resolutions.append(self.policy.resolve(finding, a, b))
@@ -107,6 +107,7 @@ class ContradictionEngine:
         finding: ConflictFinding,
         analysis: QueryAnalysis | None,
         rank: dict[str, int],
+        by_id: dict[str, object] | None = None,
     ) -> bool:
         """Whether this conflict bears on the question that was asked.
 
@@ -140,7 +141,31 @@ class ContradictionEngine:
         # *does* carry the information ranks highly. Requiring both chunks in the
         # top three would reject the gap precisely when the gap-filling answer
         # won the query, which is the case worth disclosing.
+        #
+        # The rank tested has to be the GAP-FILLING chunk's, not the better of
+        # the two. Using min() let the silent documentation side qualify the
+        # finding on its own rank, which produced the worst possible disclosure:
+        # a question whose answer is fully documented (payload size, docs chunk
+        # at #1) came back with "this is not covered in the official
+        # documentation", sourced from a staff post about a different product
+        # area that happened to rank #5. A gap claim is only about the question
+        # asked if the passage filling the gap is itself a top answer to it.
         if topic == "documentation_coverage":
-            return min(ra, rb) <= 3
+            filler_id = finding.chunk_b_id
+            if by_id is not None:
+                sources = {cid: getattr(by_id.get(cid), "source", None)
+                           for cid in (finding.chunk_a_id, finding.chunk_b_id)}
+                non_docs = [cid for cid, src in sources.items() if src != "docs"]
+                if len(non_docs) == 1:
+                    filler_id = non_docs[0]
+            if rank.get(filler_id, 99) > 3:
+                return False
+            # And the gap has to be a gap about this area. A staff post can be
+            # authoritative about something nobody asked.
+            filler = by_id.get(filler_id) if by_id else None
+            tags = {str(t).lower() for t in (getattr(filler, "metadata", {}) or {}).get("tags", [])}
+            if analysis.product_area and tags:
+                return analysis.product_area.lower() in tags
+            return True
 
         return ra <= 3 and rb <= 3

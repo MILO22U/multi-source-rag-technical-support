@@ -474,7 +474,7 @@ All 15 gold queries, actually executed. Full traces in `logs/queries.jsonl`; rep
 
 | # | Query | Intent | Final sources | Top-1 chunk (rank move) | Conflict → rule | Outcome |
 |---|---|---|---|---|---|---|
-| q01 | What is the maximum payload size for a Zephyr job? | `api_reference` | 5d/2f/1b | `docs:job-payloads:size-limit` (#1←2) | `docs_gap` → staff authority | ✅ "256 KiB (262,144 bytes)" |
+| q01 | What is the maximum payload size for a Zephyr job? | `api_reference` | 5d/2f/1b | `docs:job-payloads:size-limit` (#1←2) | **`misconception`** → authority | ✅ "256 KiB (262,144 bytes)", corrects the 1 MB claim |
 | q02 | Why do my jobs retry forever when the API returns 429? | `troubleshooting` | 4f/4d | `forum:t_0041:p2` (#1←1) | **`empirical_override`** → disclose both | ✅ forum-led, docs corroborated |
 | q03 | Why does Zephyr use exponential backoff instead of fixed delays? | `conceptual` | 4b/3d/1f | `blog:why-exponential-backoff:w0` (#1←1) | `conditional` → version scoping | ✅ blog-led, "jitter" present |
 | q04 | What is the default retry count? | `api_reference` | 5d/2b/1f | `docs:job-payloads:size-limit` (#1←9) | **`version_drift`** → version scoping | ⚠️ states 5 and names the v3.0 change; top-1 misranked |

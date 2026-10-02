@@ -59,6 +59,8 @@ class ExtractiveSynthesizer:
         self.refuse_below = float(config.get("generation.refuse_below_score", 0.18))
         self.refuse_below_coverage = float(config.get("generation.refuse_below_coverage", 0.34))
         self.max_unknown_ratio = float(config.get("generation.refuse_above_unknown_ratio", 0.40))
+        # How many of the query's rarest terms a passage may be judged on.
+        self.rare_terms = int(config.get("generation.quote_pivot_terms", 2))
         self.max_sentences_per_chunk = 3
         self.max_sentence_chars = 400
         #: Every token present anywhere in the corpus. Injected by the pipeline.
@@ -118,7 +120,7 @@ class ExtractiveSynthesizer:
         citations: list[Citation] = []
         sentence_index = 0
 
-        for sc in used[:4]:
+        for sc in self._quotable(query, used, resolutions)[:4]:
             picked = self._best_sentences(query, sc, idf)
             if not picked:
                 continue
@@ -152,6 +154,61 @@ class ExtractiveSynthesizer:
         )
 
     # -- helpers -------------------------------------------------------------
+
+    def _quotable(
+        self,
+        query: str,
+        chunks: list[ScoredChunk],
+        resolutions: list[Resolution],
+    ) -> list[ScoredChunk]:
+        """Drop top-ranked passages that are not about the question.
+
+        The final set is eight topically adjacent passages, and the top four were
+        quoted unconditionally. That put "Install with pip install zephyr-cli"
+        and the default retry policy into the answer to "what is the maximum
+        payload size", because a reranked score of 0.374 against 0.391 is not a
+        meaningful difference -- the ranker is doing its job, the answer was just
+        quoting further down the list than the signal supports.
+
+        The gate is the query's **rarest** terms, not any shared term: "job" and
+        "maximum" occur all over this corpus, while "payload" is what the
+        question is actually about. Corpus document frequency decides which is
+        which, so the test does not need the product-area taxonomy.
+
+        Two passages are never dropped: the top-ranked one (the answer has to
+        lead with something) and any passage named in a disclosed conflict
+        (requirement 5 outranks tidiness -- evidence that contradicts must be
+        quotable even if its wording is further from the question).
+        """
+        if len(chunks) <= 1:
+            return chunks
+
+        df = getattr(self, "corpus_df", None) or {}
+        total = max(1, getattr(self, "corpus_chunks", 0) or len(chunks))
+
+        terms = [t for t in dict.fromkeys(tokenize(query)) if len(t) > 2]
+        # Keep only terms the corpus actually knows; an unknown term cannot
+        # discriminate between passages (and drives the refusal path instead).
+        known = [t for t in terms if t in df]
+        if not known:
+            return chunks
+        # Rarest first. ``self.rare_terms`` of them have to be matched.
+        known.sort(key=lambda t: df.get(t, total))
+        pivot = set(known[: max(1, self.rare_terms)])
+
+        protected = {sc.chunk.chunk_id for sc in chunks[:1]}
+        for res in resolutions:
+            protected.update(
+                x for x in (res.finding.chunk_a_id, res.finding.chunk_b_id,
+                            res.winner, res.loser) if isinstance(x, str)
+            )
+
+        kept: list[ScoredChunk] = []
+        for sc in chunks:
+            if sc.chunk.chunk_id in protected or pivot & set(tokenize(sc.chunk.text)):
+                kept.append(sc)
+        return kept or chunks
+
 
     def _idf(self, chunks: list[ScoredChunk]) -> dict[str, float]:
         df: Counter[str] = Counter()

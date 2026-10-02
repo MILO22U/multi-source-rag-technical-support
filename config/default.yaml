@@ -232,6 +232,8 @@ llm:
 # -----------------------------------------------------------------------------
 generation:
   backend: "extractive"          # "extractive" (offline, deterministic) | "llm"
+  quote_pivot_terms: 2           # a quoted passage must contain one of the query's
+                                 # N rarest terms, else it is topically adjacent noise
   llm:
     model: null                  # null -> falls back to llm.model, then $LLM_MODEL
     max_tokens: 2048
