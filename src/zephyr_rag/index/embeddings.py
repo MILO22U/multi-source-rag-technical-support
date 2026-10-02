@@ -19,9 +19,10 @@ Three backends sit behind one protocol:
     A real neural encoder (``BAAI/bge-m3``). Activates with the ``local`` extra.
 
 ``VoyageBackend``
-    Hosted embeddings (``voyage-3-large``). Note that **Anthropic has no
-    embeddings endpoint** -- Claude is used for intent routing, contradiction
-    judging and synthesis in this project, never for vectors.
+    Hosted embeddings (``voyage-3-large``). The chat-completion provider used
+    for the optional reasoning stages (intent routing, contradiction judging,
+    synthesis) serves no embeddings endpoint, so vectors come from a separate
+    embeddings provider.
 
 Implementation note on LSA
 --------------------------
@@ -279,8 +280,9 @@ class SentenceTransformerBackend:
 class VoyageBackend:
     """Hosted embeddings via Voyage AI (optional).
 
-    Anthropic does not serve an embeddings endpoint; Claude is used elsewhere in
-    this pipeline for intent routing, contradiction judging and synthesis.
+    Kept separate from the optional LLM stages on purpose: the chat-completion
+    provider those stages call serves no embeddings endpoint, so vectors are
+    sourced independently of whichever model is configured for reasoning.
     """
 
     def __init__(self, config) -> None:  # pragma: no cover - optional path

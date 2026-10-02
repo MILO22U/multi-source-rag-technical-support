@@ -57,7 +57,7 @@ Evaluated on a purpose-built corpus of 38 documents → **54 chunks**, with **12
         └──────────────────────────┬──────────────────────────┘
                                    │
  query ─▶ QueryAnalyzer ───────────┤   intent (6 classes) · version → HARD filter
-          (rules | claude-opus-5)  │   · expansions ×2 (down-weighted 0.35)
+          (rules | hosted LLM)     │   · expansions ×2 (down-weighted 0.35)
                                    ▼
                         ┌──────────────────────┐
                         │ Weighted RRF (k=60)  │  rank-based: BM25 and cosine
@@ -133,7 +133,7 @@ Evaluated on a purpose-built corpus of 38 documents → **54 chunks**, with **12
 │   ├── retrieval/                analyzer · fusion · weights · hybrid
 │   ├── rerank/                   cross_encoder · blend · mmr
 │   ├── contradiction/            detect · policy
-│   ├── generate/synthesize.py    extractive + Claude backends
+│   ├── generate/synthesize.py    extractive + optional LLM backend
 │   ├── observability/trace.py    per-query JSONL trace
 │   └── webapp/                   chat app: stdlib HTTP server + one HTML file
 ├── docs/
@@ -160,7 +160,7 @@ Evaluated on a purpose-built corpus of 38 documents → **54 chunks**, with **12
 | **GPU** | **Not required.** No neural model runs in the default configuration. |
 | RAM / disk | < 500 MB / < 50 MB |
 | Network | **Not required** |
-| API key | **Not required.** `ANTHROPIC_API_KEY` enables optional LLM stages only. |
+| API key | **Not required.** The optional LLM stages need one; the measured system does not. |
 
 ### Reproducing Our Results
 
@@ -190,10 +190,13 @@ python scripts/evaluate.py --per-query
 python scripts/ablations.py --alpha-sweep
 ```
 
-**Optional — enable the Claude-backed stages:**
+**Optional — enable the LLM-backed stages.** They are provider-agnostic: no
+model id is hardcoded in `src/`, so supply one through `LLM_MODEL` (or
+`llm.model` in the config) together with whatever key your SDK reads.
+
 ```bash
-pip install -e ".[llm]"
-export ANTHROPIC_API_KEY=sk-ant-...
+pip install -e ".[llm]"          # installs the reference SDK
+export LLM_MODEL=<your-provider-model-id>
 python scripts/evaluate.py \
   --set retrieval.query_analysis.backend=llm \
   --set contradiction.detector=llm \

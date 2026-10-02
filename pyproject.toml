@@ -11,7 +11,7 @@ requires-python = ">=3.10"
 dependencies = []
 
 [project.optional-dependencies]
-llm = ["anthropic>=0.40"]                 # intent routing, contradiction judge, answer synthesis
+llm = ["anthropic>=0.40"]                 # reference SDK for the optional LLM stages; model id is config/env-driven
 fast = ["numpy>=1.26"]                    # optional speedup for the LSA embedding backend
 local = ["sentence-transformers>=3.0"]    # real dense embeddings + bge cross-encoder reranker
 dev = ["pytest>=8"]

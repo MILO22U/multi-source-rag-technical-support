@@ -188,7 +188,7 @@ def slugify(text: str, *, max_len: int = 60) -> str:
 def estimate_tokens(text: str) -> int:
     """Approximate the LLM token count of ``text``.
 
-    A local proxy, not ground truth. The real figure comes from Claude's
+    A local proxy, not ground truth. The real figure comes from the provider's
     ``messages.count_tokens`` endpoint, which this function stands in for so
     that chunking stays runnable with no network and no API key; swap it behind
     the same signature when an API key is available.

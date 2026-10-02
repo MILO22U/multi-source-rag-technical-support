@@ -9,6 +9,7 @@ an override string rather than a branch.
 
 from __future__ import annotations
 
+import os
 import random
 from pathlib import Path
 from typing import Any
@@ -114,6 +115,36 @@ class Config:
         raw = self.require(f"paths.{key}")
         p = Path(raw)
         return p if p.is_absolute() else PROJECT_ROOT / p
+
+    # -- optional LLM stages -------------------------------------------------
+
+    def llm_model(self, stage_key: str | None = None) -> str:
+        """Resolve the model id for an optional LLM stage.
+
+        No provider or model id is hardcoded anywhere in ``src/``. The id is
+        looked up in this order:
+
+        1. the stage's own key (e.g. ``generation.llm.model``),
+        2. the shared ``llm.model`` default in the config,
+        3. the ``LLM_MODEL`` environment variable.
+
+        The LLM stages are off by default, so the common case never reaches
+        here; when one is switched on without an id configured, failing with an
+        explicit message beats sending a request naming a model the account may
+        not have.
+        """
+        candidates = [self.get(stage_key) if stage_key else None,
+                      self.get("llm.model"),
+                      os.environ.get("LLM_MODEL")]
+        for value in candidates:
+            if value:
+                return str(value)
+        raise ValueError(
+            "no LLM model configured -- set LLM_MODEL in the environment, "
+            f"or llm.model{f' / {stage_key}' if stage_key else ''} in the config. "
+            "The optional LLM stages are provider-agnostic; supply the model id "
+            "your SDK expects."
+        )
 
     # -- derivation ----------------------------------------------------------
 

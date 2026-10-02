@@ -564,7 +564,7 @@ class RuleBasedDetector:
 
 
 class LlmDetector:
-    """Claude-backed detector (optional) -- generalises past registered attributes.
+    """LLM-backed detector (optional) -- generalises past registered attributes.
 
     Batches every candidate pair into one request to keep latency flat, and falls
     back to the rule-based detector on failure.
@@ -625,7 +625,7 @@ class LlmDetector:
                 "additionalProperties": False,
             }
             response = self._client.messages.create(
-                model="claude-opus-5",
+                model=self.config.llm_model("contradiction.llm.model"),
                 max_tokens=4096,
                 thinking={"type": "adaptive"},
                 output_config={"format": {"type": "json_schema", "schema": schema}},

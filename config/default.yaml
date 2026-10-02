@@ -67,7 +67,7 @@ chunking:
     include_version: true
     include_date: true           # mandatory for blog: a post is a point-in-time snapshot
     include_authority: true      # 'accepted answer by staff' etc.
-    llm_blurb: false             # true = per-chunk situating sentence via Claude Haiku
+    llm_blurb: false             # true = per-chunk situating sentence via the LLM backend
 
 # -----------------------------------------------------------------------------
 # Indexing
@@ -101,7 +101,7 @@ retrieval:
   rrf_k: 60                      # Reciprocal Rank Fusion constant
 
   query_analysis:
-    backend: "rules"             # "rules" (deterministic) | "llm" (claude-opus-5)
+    backend: "rules"             # "rules" (deterministic) | "llm" (hosted model, see llm.model)
     expand_queries: true
     max_expansions: 3
     expansion_weight: 0.35      # expansion lists are down-weighted vs the original
@@ -166,7 +166,7 @@ rerank:
     max_per_document: 3
 
   llm_listwise:
-    model: "claude-opus-5"
+    model: null                  # null -> falls back to llm.model, then $LLM_MODEL
     top_n: 12
     effort: "low"
 
@@ -175,7 +175,7 @@ rerank:
 # -----------------------------------------------------------------------------
 contradiction:
   enabled: true
-  detector: "rules"              # "rules" (deterministic) | "llm" (claude-opus-5)
+  detector: "rules"              # "rules" (deterministic) | "llm" (hosted model, see llm.model)
 
   pair_selection:                # only compare pairs that could plausibly conflict
     min_similarity: 0.60
@@ -217,12 +217,23 @@ contradiction:
     forbid_silent_averaging: true   # never emit "around 3 to 5" for 3 vs 5
 
 # -----------------------------------------------------------------------------
+# Optional LLM stages -- provider-agnostic
+# -----------------------------------------------------------------------------
+# Every LLM-backed stage (query analysis, contradiction judging, listwise
+# reranking, synthesis) is OFF by default; the measured system is rules-based
+# and stdlib-only. No provider or model id is hardcoded in src/: a stage reads
+# its own model key, then this shared default, then $LLM_MODEL, and raises a
+# clear error if none is set. Supply whatever id your SDK expects.
+llm:
+  model: null                    # e.g. export LLM_MODEL=<your-provider-model-id>
+
+# -----------------------------------------------------------------------------
 # Generation
 # -----------------------------------------------------------------------------
 generation:
   backend: "extractive"          # "extractive" (offline, deterministic) | "llm"
   llm:
-    model: "claude-opus-5"
+    model: null                  # null -> falls back to llm.model, then $LLM_MODEL
     max_tokens: 2048
     thinking: "adaptive"
     effort: "high"

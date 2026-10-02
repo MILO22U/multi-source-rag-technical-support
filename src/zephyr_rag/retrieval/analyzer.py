@@ -26,7 +26,7 @@ Two further products of this stage:
   on score. Hard constraints deserve hard tools.
 
 The rule-based classifier is the default so results reproduce with no API key.
-``retrieval.query_analysis.backend: llm`` swaps in Claude with structured
+``retrieval.query_analysis.backend: llm`` swaps in a hosted LLM with structured
 outputs; the interface is identical.
 """
 
@@ -306,7 +306,7 @@ class RuleBasedAnalyzer:
 
 
 class LlmAnalyzer:
-    """Claude-backed analyzer using structured outputs (optional).
+    """LLM-backed analyzer using structured outputs (optional).
 
     Falls back to the rule-based analyzer on any failure rather than raising: a
     transient API error should degrade ranking quality, not abort the query.
@@ -363,7 +363,7 @@ class LlmAnalyzer:
         try:
             client = self._ensure_client()
             response = client.messages.create(
-                model="claude-opus-5",
+                model=self.config.llm_model("retrieval.query_analysis.model"),
                 max_tokens=1024,
                 output_config={
                     "format": {"type": "json_schema", "schema": self._SCHEMA},

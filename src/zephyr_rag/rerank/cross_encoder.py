@@ -35,7 +35,7 @@ Backends
     ``BAAI/bge-reranker-v2-m3`` via sentence-transformers (``local`` extra).
 
 ``LlmListwiseReranker``
-    Claude ranks the top-N as a list, which can apply reasoning no pairwise
+    A hosted LLM ranks the top-N as a list, applying reasoning no pairwise
     scorer can. Highest quality, highest latency -- reported separately.
 """
 

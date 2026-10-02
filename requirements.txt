@@ -8,7 +8,7 @@ pyyaml>=6.0            # configuration files
 # numpy>=1.26                  # speeds up the LSA backend; not required
 
 # --- Optional: LLM stages (intent routing, contradiction judge, synthesis) ---
-# anthropic>=0.40              # requires ANTHROPIC_API_KEY
+# anthropic>=0.40              # reference SDK for the optional LLM stages (set LLM_MODEL + the SDK key)
 
 # --- Development ---
 pytest>=8

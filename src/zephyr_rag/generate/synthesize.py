@@ -20,7 +20,7 @@ Two backends
 ------------
 ``ExtractiveSynthesizer`` (default) selects and quotes the most query-relevant
 sentences, so every statement is traceable to a chunk by construction and the
-evaluation has no generation variance. ``LlmSynthesizer`` uses Claude with
+evaluation has no generation variance. ``LlmSynthesizer`` uses a hosted LLM with
 document blocks and ``citations`` enabled, which yields span-level attribution
 reported by the model rather than parsed out of prose.
 """
@@ -330,7 +330,7 @@ class ExtractiveSynthesizer:
 
 
 class LlmSynthesizer:
-    """Claude-backed synthesis with span-level citations (optional)."""
+    """LLM-backed synthesis with span-level citations (optional)."""
 
     name = "llm"
 
@@ -355,7 +355,7 @@ user may already hold it.
 
     def __init__(self, config) -> None:
         self.config = config
-        self.model = config.get("generation.llm.model", "claude-opus-5")
+        self.model = config.llm_model("generation.llm.model")
         self.max_tokens = int(config.get("generation.llm.max_tokens", 2048))
         self.effort = config.get("generation.llm.effort", "high")
         self.use_citations = bool(config.get("generation.llm.use_citations", True))
