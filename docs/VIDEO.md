@@ -12,6 +12,8 @@ shown, on this machine, from the committed corpus.
 | Chat app | `scripts/app.py` | Browser chat UI over the same pipeline — an alternative to the terminal demos; see the variant section below. |
 | Log viewer | `scripts/show_log.py` | Human-readable view of one `logs/queries.jsonl` record, so requirement 6 is legible on screen instead of a wrapped blob. `--grep <text>` selects by query. |
 
+**Recording the app instead of the terminal?** Use [`VIDEO_APP.md`](VIDEO_APP.md) — same narration, every demo a click in the chat app, the diagram and tables from GitHub, and the terminal only used once before recording starts.
+
 **Shape of the video:** slides carry the argument, the terminal carries the
 evidence, three window switches total. Narration is **628 words ≈ 4:16 of
 speech**, leaving ~40 s for transitions and reading beats. Target 4:55.
@@ -196,6 +198,43 @@ the pipeline, and it cannot break on a rendering bug mid-recording. Pick one and
 rehearse that one; mixing both costs window switches you do not have time for.
 If you record the app, launch it *before* hitting record — startup prints build
 output you do not want on camera.
+
+---
+
+## On-screen source for each line
+
+What to have visible during each narration block. Line numbers are current as of
+this commit; in VS Code, `Ctrl+P` then `filename:114` opens a file at a line.
+Pre-open these as tabs in narration order before recording, so each beat is a
+tab switch rather than a hunt through the explorer.
+
+| Beat | On screen | Jump to |
+|---|---|---|
+| 0:00 title | deck 1, repo tree behind it | `docs/slides/deck.html` |
+| 0:20 twelve contradictions | the planted-conflict ledger | `data/conflicts_planted.json` L5—L136 (C1—C12) |
+| 0:42 architecture | deck 3, or the three chunkers | `README.md:40` · `chunking/docs.py:55` · `chunking/forum.py:40` · `chunking/blog.py:34` |
+| 0:42 per-source indices | index construction | `index/store.py` · `index/bm25.py` |
+| 0:42 rank-based RRF | the fusion function | `retrieval/fusion.py` |
+| 0:42 floor of two per source | the hard floor and its comment | `config/default.yaml:99` |
+| 1:16 intent weights | the weight matrix itself | `config/default.yaml:114` |
+| 1:16 authority / recency | the two multipliers | `config/default.yaml:123`, `:133` |
+| 1:34 demo 1 | terminal step 1, or the first app chip | `scripts/demo.ps1` |
+| 1:34 the 429 evidence | planted conflict C7 | `data/conflicts_planted.json:71` |
+| 2:02 demo 2, #20 — #1 | terminal step 2, `was`/`move` columns | `scripts/demo.ps1` |
+| 2:02 the reranker | scorer and blend weight | `rerank/cross_encoder.py` · `config/default.yaml:158` |
+| 2:22 ablation table | deck 5, or the README rows | `README.md:378` |
+| 2:50 11-way taxonomy | the enum | `types.py:75` (values L85—96) |
+| 2:50 precedence cascade | rule order, config and code | `config/default.yaml:190` · `contradiction/policy.py` |
+| 3:08 demo 3, misconception | terminal step 3, then the raw thread | `data/forum/threads.json` `t_0007` (L5) · ledger C2 at `:16` |
+| 3:32 demo 4, non-conflict | terminal step 4 | `data/docs/concurrency-and-workers.md:18` vs `data/docs/self-hosted-agents.md:21` · ledger C11 at `:116` |
+| 3:32 false-positive pairs | the negative test set | `data/conflicts_planted.json` — `non_conflicts_for_false_positive_testing` |
+| 3:54 demo 5, refusal | terminal step 5 | threshold `generate/synthesize.py:61` · `_unknown_ratio` at `:187` |
+| 4:06 demo 6, audit trail | terminal step 6, or app — Trace log | `logs/queries.jsonl` · `scripts/show_log.py` · `observability/trace.py:265` |
+| 4:22 negative results | deck 8, or the README sections | `README.md:398`, `:410`, `:464` |
+| 4:48 close | deck 9, plus a passing test run | `README.md:510` · `tests/` |
+
+**If you show only two files:** `config/default.yaml:114` is requirement 3 in
+eight lines, and `src/zephyr_rag/types.py:85` is requirement 5 at a glance.
 
 ---
 
