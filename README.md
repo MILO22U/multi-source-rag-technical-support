@@ -166,8 +166,8 @@ Evaluated on a purpose-built corpus of 38 documents → **54 chunks**, with **12
 
 ```bash
 # 1. Clone
-git clone <repository-url>
-cd "Multi-Source RAG for Technical Support"
+git clone https://github.com/MILO22U/multi-source-rag-technical-support.git
+cd multi-source-rag-technical-support
 
 # 2. Environment
 python -m venv .venv
@@ -592,7 +592,7 @@ powershell -ExecutionPolicy Bypass -File scripts\demo.ps1 -Auto    # rehearsal, 
   year    = {2026},
   version = {0.1.0},
   license = {MIT},
-  url     = {https://github.com/<user>/multi-source-rag-technical-support}
+  url     = {https://github.com/MILO22U/multi-source-rag-technical-support}
 }
 ```
 
