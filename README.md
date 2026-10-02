@@ -561,7 +561,6 @@ live demo misbehaves on camera.
 | Asset | Path |
 |---|---|
 | Slide deck (9 slides, self-contained HTML — no network, no build) | [`docs/slides/deck.html`](docs/slides/deck.html) |
-| App-first run sheet (no terminal on camera) | [`docs/VIDEO_APP.md`](docs/VIDEO_APP.md) |
 | Live-demo driver (6 demos, Enter to advance) | [`scripts/demo.ps1`](scripts/demo.ps1) |
 | Human-readable view of one trace record | [`scripts/show_log.py`](scripts/show_log.py) |
 

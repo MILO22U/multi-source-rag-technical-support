@@ -12,8 +12,6 @@ shown, on this machine, from the committed corpus.
 | Chat app | `scripts/app.py` | Browser chat UI over the same pipeline — an alternative to the terminal demos; see the variant section below. |
 | Log viewer | `scripts/show_log.py` | Human-readable view of one `logs/queries.jsonl` record, so requirement 6 is legible on screen instead of a wrapped blob. `--grep <text>` selects by query. |
 
-**Recording the app instead of the terminal?** Use [`VIDEO_APP.md`](VIDEO_APP.md) — same narration, every demo a click in the chat app, the diagram and tables from GitHub, and the terminal only used once before recording starts.
-
 **Shape of the video:** slides carry the argument, the terminal carries the
 evidence, three window switches total. Narration is **628 words ≈ 4:16 of
 speech**, leaving ~40 s for transitions and reading beats. Target 4:55.
