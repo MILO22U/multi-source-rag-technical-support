@@ -561,6 +561,7 @@ live demo misbehaves on camera.
 | Asset | Path |
 |---|---|
 | Slide deck (9 slides, self-contained HTML — no network, no build) | [`docs/slides/deck.html`](docs/slides/deck.html) |
+| Presentation walkthrough — 15 queries, architecture, requirement-by-requirement, with the words to say and the file/line to have open | [`docs/WALKTHROUGH.md`](docs/WALKTHROUGH.md) |
 | Live-demo driver (6 demos, Enter to advance) | [`scripts/demo.ps1`](scripts/demo.ps1) |
 | Human-readable view of one trace record | [`scripts/show_log.py`](scripts/show_log.py) |
 
