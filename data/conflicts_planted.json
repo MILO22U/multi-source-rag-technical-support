@@ -1,0 +1,155 @@
+{
+  "_comment": "Ground truth for evaluating requirement 5. Each entry records a conflict deliberately planted across the corpus, the relationship type the detector should assign, which side the precedence policy should favour, and whether the answer must disclose the conflict to the user. eval/metrics.py scores detection precision/recall and resolution accuracy against this file.",
+  "conflicts": [
+    {
+      "id": "C1",
+      "type": "version_drift",
+      "topic": "retries",
+      "claim_a": { "chunk_prefix": "docs:retries-and-backoff", "claim": "max_retries defaults to 5" },
+      "claim_b": { "chunk_prefix": "blog:scaling-to-1m-jobs", "claim": "max_retries defaults to 3" },
+      "expected_winner": "docs",
+      "reconcilable": true,
+      "expected_resolution": "Both are correct for their era: 3 in v2.4, 5 from v3.0 onward. Answer must state the current default and name the version change.",
+      "must_disclose": true
+    },
+    {
+      "id": "C2",
+      "type": "misconception",
+      "topic": "timeouts",
+      "claim_a": { "chunk_prefix": "docs:retries-and-backoff", "claim": "timeout=0 means fail-fast" },
+      "claim_b": { "chunk_prefix": "forum:t_0007", "claim": "timeout=0 disables the timeout" },
+      "expected_winner": "docs",
+      "reconcilable": false,
+      "expected_resolution": "The highly-upvoted forum answer is wrong. Answer must correct it explicitly, because the user may already believe it.",
+      "must_disclose": true
+    },
+    {
+      "id": "C3",
+      "type": "docs_gap",
+      "topic": "dlq",
+      "claim_a": { "chunk_prefix": "docs:cli-reference", "claim": "zephyr dlq list (no payload flag documented)" },
+      "claim_b": { "chunk_prefix": "forum:t_0012", "claim": "zephyr dlq list --include-payload exists" },
+      "expected_winner": "forum",
+      "reconcilable": true,
+      "expected_resolution": "Not a contradiction: the docs are silent, a staff forum post fills the gap. Forum wins on staff authority; answer should note it is undocumented.",
+      "must_disclose": true
+    },
+    {
+      "id": "C4",
+      "type": "conditional",
+      "topic": "cli_platform",
+      "claim_a": { "chunk_prefix": "blog:windows-support-lands", "claim": "the CLI works on Windows" },
+      "claim_b": { "chunk_prefix": "forum:t_0019", "claim": "the CLI is broken on Windows" },
+      "expected_winner": "both",
+      "reconcilable": true,
+      "expected_resolution": "Both true under different versions: broken in 3.0, fixed in 3.1. Answer must scope by version rather than pick a side.",
+      "must_disclose": true
+    },
+    {
+      "id": "C5",
+      "type": "docs_drift",
+      "topic": "cli_flags",
+      "claim_a": { "chunk_prefix": "docs:changelog", "claim": "--legacy-ack was removed in 3.2" },
+      "claim_b": { "chunk_prefix": "docs:cli-reference", "claim": "--legacy-ack is a valid flag" },
+      "expected_winner": "docs:changelog",
+      "reconcilable": false,
+      "expected_resolution": "Same-source conflict. Recency rule inside the docs tier: the changelog is authoritative, the reference page is stale.",
+      "must_disclose": true
+    },
+    {
+      "id": "C6",
+      "type": "deprecation",
+      "topic": "sdk_api",
+      "claim_a": { "chunk_prefix": "docs:python-sdk", "claim": "use client.enqueue()" },
+      "claim_b": { "chunk_prefix": "forum:t_0023", "claim": "use client.queue.push()" },
+      "expected_winner": "docs",
+      "reconcilable": true,
+      "expected_resolution": "Not a factual conflict: push() still works but is deprecated. Recommend enqueue(), note the old form is what they will see in older threads.",
+      "must_disclose": true
+    },
+    {
+      "id": "C7",
+      "type": "empirical_override",
+      "topic": "rate_limits",
+      "claim_a": { "chunk_prefix": "docs:rate-limits", "claim": "the SDK honours Retry-After" },
+      "claim_b": { "chunk_prefix": "forum:t_0041", "claim": "Retry-After is ignored and jobs retry forever" },
+      "corroborating_chunks": ["forum:t_0052", "forum:t_0063"],
+      "expected_winner": "disclose_both",
+      "reconcilable": true,
+      "expected_resolution": "Three independent reports of observed behaviour outweigh silent deference to docs. Documented intent is 3.1+; the reports are 3.0. Answer must surface the discrepancy as a known issue, not hide it.",
+      "must_disclose": true
+    },
+    {
+      "id": "C8",
+      "type": "version_drift",
+      "topic": "auth",
+      "claim_a": { "chunk_prefix": "docs:authentication", "claim": "X-Zephyr-Key header" },
+      "claim_b": { "chunk_prefix": "blog:scaling-to-1m-jobs", "claim": "Authorization: Zephyr <key> header" },
+      "expected_winner": "docs",
+      "reconcilable": true,
+      "expected_resolution": "Header changed in v3.0. Current answer is X-Zephyr-Key; mention the old form for users upgrading.",
+      "must_disclose": true
+    },
+    {
+      "id": "C9",
+      "type": "factual",
+      "topic": "payloads",
+      "claim_a": { "chunk_prefix": "docs:job-payloads", "claim": "256 KiB maximum payload" },
+      "claim_b": { "chunk_prefix": "blog:payload-tips", "claim": "1 MB maximum payload" },
+      "expected_winner": "docs",
+      "reconcilable": false,
+      "expected_resolution": "Guest-authored blog is simply wrong, and was wrong when published. Docs win on authority; low author authority is the tie-breaker signal.",
+      "must_disclose": true
+    },
+    {
+      "id": "C10",
+      "type": "version_drift",
+      "topic": "visibility_timeout",
+      "claim_a": { "chunk_prefix": "docs:concurrency-and-workers", "claim": "visibility timeout defaults to 30s" },
+      "claim_b": { "chunk_prefix": "blog:scaling-to-1m-jobs", "claim": "visibility timeout defaults to 60s" },
+      "expected_winner": "docs",
+      "reconcilable": true,
+      "expected_resolution": "60s in v2.4, 30s from v3.0. Scope by version.",
+      "must_disclose": true
+    },
+    {
+      "id": "C11",
+      "type": "complementary",
+      "topic": "concurrency",
+      "claim_a": { "chunk_prefix": "docs:concurrency-and-workers", "claim": "worker concurrency defaults to 10" },
+      "claim_b": { "chunk_prefix": "forum:t_0035", "claim": "concurrency defaults to CPU count" },
+      "expected_winner": "both",
+      "reconcilable": true,
+      "expected_resolution": "FALSE POSITIVE TEST. These describe different components: managed workers default to 10, self-hosted agents to CPU count. A good detector labels this complementary, not contradictory.",
+      "must_disclose": false
+    },
+    {
+      "id": "C12",
+      "type": "misconception",
+      "topic": "dlq",
+      "claim_a": { "chunk_prefix": "docs:dead-letter-queue", "claim": "DLQ replay is manual" },
+      "claim_b": { "chunk_prefix": "forum:t_0031", "claim": "the DLQ replays automatically after an hour" },
+      "expected_winner": "docs",
+      "reconcilable": false,
+      "expected_resolution": "Low-vote forum guess is wrong. Correct it; no automatic replay exists.",
+      "must_disclose": true
+    }
+  ],
+  "non_conflicts_for_false_positive_testing": [
+    {
+      "pair": ["docs:retries-and-backoff", "blog:why-exponential-backoff"],
+      "relationship": "agree",
+      "note": "Both describe exponential backoff with jitter in different words. Must NOT be flagged."
+    },
+    {
+      "pair": ["docs:dead-letter-queue", "blog:dlq-patterns"],
+      "relationship": "refines",
+      "note": "Blog adds operational practice on top of documented behaviour. Must NOT be flagged."
+    },
+    {
+      "pair": ["docs:authentication", "docs:quickstart"],
+      "relationship": "agree",
+      "note": "Same header, different level of detail."
+    }
+  ]
+}

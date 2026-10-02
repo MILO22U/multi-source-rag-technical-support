@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "zephyr-rag"
+version = "0.1.0"
+description = "Multi-source RAG over product docs, forum threads, and technical blog posts"
+requires-python = ">=3.10"
+# The core pipeline is deliberately pure-stdlib so it runs anywhere with no install step.
+dependencies = []
+
+[project.optional-dependencies]
+llm = ["anthropic>=0.40"]                 # intent routing, contradiction judge, answer synthesis
+fast = ["numpy>=1.26"]                    # optional speedup for the LSA embedding backend
+local = ["sentence-transformers>=3.0"]    # real dense embeddings + bge cross-encoder reranker
+dev = ["pytest>=8"]
+
+[project.scripts]
+zephyr-rag = "zephyr_rag.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+# The chat app ships one HTML file; without this a wheel install would serve 404.
+[tool.setuptools.package-data]
+"zephyr_rag.webapp" = ["static/*.html"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]

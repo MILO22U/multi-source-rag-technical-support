@@ -1,0 +1,47 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "RAG: query (--explain)",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "zephyr_rag.cli",
+            "args": [
+                "query",
+                "Why do my jobs retry forever when the API returns 429?",
+                "--explain"
+            ],
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}",
+            "justMyCode": false
+        },
+        {
+            "name": "RAG: ingest + index",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "zephyr_rag.cli",
+            "args": [
+                "ingest",
+                "--dump-chunks"
+            ],
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "name": "Eval: gold set",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "eval/run_eval.py",
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "name": "Eval: ablations",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "eval/ablations.py",
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}"
+        }
+    ]
+}

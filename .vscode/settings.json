@@ -1,0 +1,21 @@
+{
+  "python.defaultInterpreterPath": ".venv\\Scripts\\python.exe",
+  "python.analysis.extraPaths": ["src"],
+  "python.analysis.typeCheckingMode": "basic",
+  "python.testing.pytestEnabled": true,
+  "python.testing.pytestArgs": ["tests"],
+  "python.testing.unittestEnabled": false,
+  "editor.formatOnSave": true,
+  "[python]": {
+    "editor.rulers": [100],
+    "editor.codeActionsOnSave": { "source.organizeImports": "explicit" }
+  },
+  "files.exclude": {
+    "**/__pycache__": true,
+    "**/*.egg-info": true
+  },
+  "search.exclude": {
+    "logs/**": true,
+    ".venv/**": true
+  }
+}

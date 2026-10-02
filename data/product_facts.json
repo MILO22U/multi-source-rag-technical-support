@@ -1,0 +1,81 @@
+{
+  "product": {
+    "name": "Zephyr",
+    "tagline": "Managed distributed task queue",
+    "current_version": "3.2",
+    "versions": ["2.4", "3.0", "3.1", "3.2"]
+  },
+  "_comment": "Single source of truth for the fictional product. Every corpus document is authored against this file, and eval/gold.json answer keys reference it. When a fact differs by version, the `by_version` map is canonical and any document stating a bare value must belong to the matching era.",
+  "facts": {
+    "max_retries_default": {
+      "by_version": { "2.4": 3, "3.0": 5, "3.1": 5, "3.2": 5 },
+      "canonical": 5,
+      "note": "Raised from 3 to 5 in v3.0."
+    },
+    "backoff_strategy": {
+      "by_version": {
+        "2.4": "fixed 2s delay",
+        "3.0": "exponential, base 1s, factor 2, full jitter",
+        "3.1": "exponential, base 1s, factor 2, full jitter",
+        "3.2": "exponential, base 1s, factor 2, full jitter"
+      },
+      "canonical": "exponential, base 1s, factor 2, full jitter"
+    },
+    "max_payload_bytes": { "canonical": 262144, "human": "256 KiB" },
+    "auth_header": {
+      "by_version": {
+        "2.4": "Authorization: Zephyr <key>",
+        "3.0": "X-Zephyr-Key: <key>",
+        "3.1": "X-Zephyr-Key: <key>",
+        "3.2": "X-Zephyr-Key: <key>"
+      },
+      "canonical": "X-Zephyr-Key: <key>"
+    },
+    "visibility_timeout_default_seconds": {
+      "by_version": { "2.4": 60, "3.0": 30, "3.1": 30, "3.2": 30 },
+      "canonical": 30
+    },
+    "timeout_zero_semantics": {
+      "canonical": "fail-fast: the job fails immediately on the first attempt",
+      "common_misconception": "that timeout=0 disables the timeout (it does not)"
+    },
+    "enqueue_api": {
+      "canonical": "client.enqueue(queue, payload)",
+      "deprecated": "client.queue.push(queue, payload)",
+      "deprecated_status": "still functional in 3.2, emits DeprecationWarning, slated for removal in 4.0"
+    },
+    "dlq": {
+      "entry_condition": "a job enters the dead-letter queue after max_retries attempts are exhausted",
+      "replay": "manual only, via `zephyr dlq replay <job-id>` or client.dlq.replay()",
+      "auto_replay": false,
+      "cli_list_command": "zephyr dlq list",
+      "undocumented_flag": "--include-payload (documented only in a staff forum post)"
+    },
+    "rate_limits": {
+      "status_code": 429,
+      "header": "Retry-After",
+      "documented_behavior": "the SDK honours Retry-After and schedules the next attempt accordingly",
+      "observed_bug": "in 3.0 the SDK ignored Retry-After and applied plain exponential backoff; fixed in 3.1",
+      "requests_per_minute": 600
+    },
+    "windows_cli_support": {
+      "by_version": { "3.0": "broken (symlink resolution bug in the credential store)", "3.1": "supported", "3.2": "supported" }
+    },
+    "max_batch_size": { "canonical": 100 },
+    "idempotency_key_ttl_hours": { "canonical": 24 },
+    "default_worker_concurrency": {
+      "canonical": 10,
+      "note": "Managed workers default to 10. Self-hosted agents default to CPU count; this is a different component, not a contradiction."
+    },
+    "job_ttl_days": { "canonical": 7 },
+    "legacy_ack_flag": {
+      "canonical": "removed in 3.2",
+      "note": "The CLI reference page still documents it (stale); the changelog is correct."
+    }
+  },
+  "out_of_scope_topics": [
+    "Kubernetes CronJob integration",
+    "Terraform provider",
+    "gRPC transport"
+  ]
+}

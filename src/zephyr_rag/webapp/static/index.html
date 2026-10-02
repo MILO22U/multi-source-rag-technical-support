@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Zephyr Support RAG</title>
+<style>
+  /* Single file, no CDN: the app must run with no network, like the pipeline. */
+  :root{
+    --bg:#0d1115; --bg2:#12171d; --panel:#161c23; --line:#252f39; --line2:#303c48;
+    --fg:#e7edf3; --dim:#94a2ae; --dim2:#6f7d89;
+    --a:#5aa9e6; --docs:#5aa9e6; --forum:#f2a25c; --blog:#a98bea;
+    --good:#67c99a; --warn:#e8b84b; --bad:#e87b7b;
+    --radius:12px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    background:var(--bg); color:var(--fg);
+    font:15px/1.55 "Segoe UI",system-ui,-apple-system,Roboto,Helvetica,Arial,sans-serif;
+    display:grid; grid-template-columns:268px 1fr; overflow:hidden;
+  }
+  .mono{font-family:Consolas,"Cascadia Mono",Menlo,monospace}
+  button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
+
+  /* ---------- sidebar ---------- */
+  aside{
+    background:var(--bg2); border-right:1px solid var(--line);
+    display:flex; flex-direction:column; gap:14px; padding:16px 14px; overflow:auto;
+  }
+  .brand{font-weight:700; font-size:16px; letter-spacing:-.01em}
+  .brand small{display:block; color:var(--dim2); font-weight:400; font-size:11.5px; letter-spacing:.02em; margin-top:3px}
+  .status{
+    background:var(--panel); border:1px solid var(--line); border-radius:10px;
+    padding:10px 11px; font-size:12px; color:var(--dim); display:grid; gap:5px;
+  }
+  .status b{color:var(--fg); font-weight:600}
+  .status .row{display:flex; justify-content:space-between; gap:8px}
+  .side-btn{
+    display:flex; align-items:center; gap:8px; width:100%; text-align:left;
+    padding:9px 11px; border:1px solid var(--line); border-radius:9px;
+    background:var(--panel); font-size:13px; color:var(--fg);
+  }
+  .side-btn:hover{border-color:var(--line2); background:#1b222a}
+  .side-btn .k{color:var(--dim2); font-size:11px; margin-left:auto}
+  .side-btn.primary{border-color:#2c4e68; background:#16293a; color:#cfe6fa}
+  .side-label{font-size:10.5px; text-transform:uppercase; letter-spacing:.14em; color:var(--dim2); margin:6px 2px 0}
+  .legend{display:grid; gap:6px; font-size:12px; color:var(--dim)}
+  .legend div{display:flex; align-items:center; gap:7px}
+  .dot{width:8px;height:8px;border-radius:50%;flex:none}
+  .hist{display:grid; gap:4px}
+  .hist button{
+    font-size:12.5px; color:var(--dim); text-align:left; padding:7px 9px; border-radius:8px;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+  .hist button:hover{background:var(--panel); color:var(--fg)}
+
+  /* ---------- main ---------- */
+  main{display:flex; flex-direction:column; min-width:0; height:100vh}
+  #scroll{flex:1; overflow-y:auto; scroll-behavior:smooth}
+  .wrap{max-width:860px; margin:0 auto; padding:28px 24px 8px}
+
+  /* empty state */
+  .hero{padding:8vh 0 0; text-align:center}
+  .hero h1{font-size:30px; letter-spacing:-.02em; margin-bottom:8px}
+  .hero p{color:var(--dim); font-size:14px; max-width:620px; margin:0 auto 26px}
+  .chips{display:grid; grid-template-columns:1fr 1fr; gap:10px; text-align:left}
+  .chip{
+    background:var(--panel); border:1px solid var(--line); border-radius:var(--radius);
+    padding:12px 13px; display:grid; gap:4px;
+  }
+  .chip:hover{border-color:var(--a); background:#172230}
+  .chip .q{font-size:13.5px}
+  .chip .t{font-size:11px; color:var(--a); text-transform:uppercase; letter-spacing:.1em}
+  .chip .h{font-size:11.5px; color:var(--dim2)}
+
+  /* messages */
+  .msg{display:flex; gap:12px; padding:14px 0}
+  .msg .av{
+    width:28px;height:28px;border-radius:7px;flex:none;display:grid;place-items:center;
+    font-size:11px;font-weight:700;letter-spacing:.02em;
+  }
+  .msg.user .av{background:#223140; color:#bcd7ec}
+  .msg.bot  .av{background:#1d3024; color:#9fe0bd}
+  .msg .body{min-width:0; flex:1}
+  .msg.user .body{color:#dbe6f0}
+  .answer{white-space:pre-wrap; word-wrap:break-word}
+  .answer h4{font-size:13px; margin:14px 0 6px; color:var(--warn); letter-spacing:.01em}
+  .answer strong{color:#fff}
+  .answer em{color:var(--dim)}
+  .answer code{background:#000; color:var(--good); padding:.05em .3em; border-radius:4px; font-size:.92em}
+  .answer .src{color:var(--dim); font-size:12.5px; display:block; margin:12px 0 2px; letter-spacing:.02em}
+  .answer ul{margin:6px 0 6px 18px; white-space:normal}
+  .answer li{margin:3px 0}
+  .cursor{display:inline-block;width:7px;height:15px;background:var(--a);vertical-align:-2px;animation:b 1s steps(2) infinite}
+  @keyframes b{50%{opacity:0}}
+
+  /* meta row */
+  .meta{display:flex; flex-wrap:wrap; gap:6px; margin-top:12px; align-items:center}
+  .tag{
+    font-size:11.5px; padding:3px 8px; border-radius:999px;
+    border:1px solid var(--line2); color:var(--dim); background:#131a21;
+  }
+  .tag b{color:var(--fg); font-weight:600}
+  .tag.docs{border-color:#2d4f6b; color:#a8cfee}
+  .tag.forum{border-color:#6b4f2d; color:#f0c89a}
+  .tag.blog{border-color:#4d3d6b; color:#cbb8f2}
+  .tag.ms{border-color:#2f4738; color:#9fe0bd}
+  .tag.refused{border-color:#6b3030; color:#f0a8a8}
+  .linkbtn{font-size:12px; color:var(--a); padding:3px 2px}
+  .linkbtn:hover{text-decoration:underline}
+
+  /* conflict banner */
+  .conf{
+    margin-top:12px; border:1px solid var(--line); border-left:3px solid var(--warn);
+    background:#1a1710; border-radius:10px; padding:11px 13px; font-size:13px;
+  }
+  .conf.hard{border-left-color:var(--bad); background:#1c1212}
+  .conf.soft{border-left-color:var(--good); background:#111a15}
+  .conf .hd{display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:6px}
+  .conf .rel{font-weight:700; font-size:12px; letter-spacing:.06em; text-transform:uppercase; color:var(--warn)}
+  .conf.hard .rel{color:var(--bad)} .conf.soft .rel{color:var(--good)}
+  .conf .why{color:var(--dim); font-size:12.5px}
+  .claims{display:grid; gap:5px; margin-top:8px; font-size:12.5px}
+  .claim{display:flex; gap:8px; align-items:flex-start}
+  .claim .mark{flex:none; font-size:11px; padding:1px 6px; border-radius:5px; border:1px solid var(--line2); color:var(--dim)}
+  .claim.w .mark{border-color:#2f4738; color:#9fe0bd}
+  .claim.l .mark{border-color:#6b3030; color:#f0a8a8}
+
+  /* sources */
+  .sources{display:flex; flex-wrap:wrap; gap:6px; margin-top:10px}
+  .badge{
+    display:inline-flex; align-items:center; gap:7px; max-width:100%;
+    font-size:12px; padding:5px 9px; border-radius:8px;
+    border:1px solid var(--line2); background:#131a21; color:var(--dim);
+  }
+  .badge:hover{background:#1b2530; color:var(--fg)}
+  .badge .pill{font-size:10px; font-weight:700; letter-spacing:.08em; text-transform:uppercase}
+  .badge.docs .pill{color:var(--docs)} .badge.forum .pill{color:var(--forum)} .badge.blog .pill{color:var(--blog)}
+  .badge .mv{color:var(--good); font-size:11px}
+
+  /* trace */
+  details.trace{margin-top:10px; border:1px solid var(--line); border-radius:10px; background:var(--panel)}
+  details.trace summary{padding:9px 12px; font-size:12.5px; color:var(--dim); cursor:pointer; list-style:none}
+  details.trace summary::-webkit-details-marker{display:none}
+  details.trace summary:before{content:"\25B8  "; color:var(--a)}
+  details.trace[open] summary:before{content:"\25BE  "}
+  details.trace .in{padding:2px 12px 12px; overflow-x:auto}
+  table{border-collapse:collapse; width:100%; font-size:12px}
+  th,td{text-align:left; padding:4px 8px; border-bottom:1px solid var(--line); white-space:nowrap}
+  th{color:var(--dim2); font-weight:600; font-size:11px; text-transform:uppercase; letter-spacing:.07em}
+  td.n,th.n{text-align:right; font-family:Consolas,monospace}
+  .up{color:var(--good)} .down{color:var(--bad)} .flat{color:var(--dim2)}
+
+  /* composer */
+  .composer{border-top:1px solid var(--line); background:linear-gradient(180deg,#0d1115cc,#0d1115)}
+  .cin{max-width:860px; margin:0 auto; padding:14px 24px 18px}
+  .box{
+    display:flex; align-items:flex-end; gap:8px; background:var(--panel);
+    border:1px solid var(--line2); border-radius:14px; padding:9px 10px 9px 14px;
+  }
+  .box:focus-within{border-color:var(--a)}
+  textarea{
+    flex:1; background:none; border:none; outline:none; color:var(--fg);
+    font:inherit; resize:none; max-height:160px; line-height:1.5; padding:3px 0;
+  }
+  .send{
+    width:32px;height:32px;border-radius:9px;background:var(--a);color:#06121c;
+    display:grid;place-items:center;font-weight:700;flex:none;
+  }
+  .send:disabled{background:#2a3642; color:#7b8a96; opacity:.6; cursor:default}
+  .hintline{display:flex; justify-content:space-between; gap:10px; margin-top:7px; font-size:11px; color:var(--dim2)}
+
+  /* drawer + modal */
+  .scrim{position:fixed; inset:0; background:#000a; display:none; z-index:40}
+  .scrim.on{display:block}
+  .drawer{
+    position:fixed; top:0; right:0; bottom:0; width:min(560px,92vw); z-index:50;
+    background:var(--bg2); border-left:1px solid var(--line2);
+    transform:translateX(102%); transition:transform .18s ease; display:flex; flex-direction:column;
+  }
+  .drawer.on{transform:none}
+  .drawer header{display:flex; gap:10px; align-items:center; padding:14px 16px; border-bottom:1px solid var(--line)}
+  .drawer header .t{font-size:14px; font-weight:600; flex:1; min-width:0}
+  .drawer .in{padding:16px; overflow:auto; flex:1}
+  .drawer pre{
+    white-space:pre-wrap; font-family:Consolas,monospace; font-size:12.5px;
+    background:#0a0e12; border:1px solid var(--line); border-radius:10px; padding:12px; color:#d6e2ec;
+  }
+  .kv{display:grid; grid-template-columns:auto 1fr; gap:4px 12px; font-size:12.5px; margin-bottom:14px}
+  .kv dt{color:var(--dim2)} .kv dd{color:var(--fg)}
+  .x{font-size:18px; color:var(--dim); padding:0 4px}
+  .x:hover{color:var(--fg)}
+  .spin{display:inline-block;width:12px;height:12px;border:2px solid var(--line2);border-top-color:var(--a);border-radius:50%;animation:s .7s linear infinite;vertical-align:-2px}
+  @keyframes s{to{transform:rotate(360deg)}}
+  .err{color:var(--bad); font-size:13px; margin-top:8px}
+</style>
+</head>
+<body>
+
+<aside>
+  <div class="brand">Zephyr Support RAG
+    <small>docs &middot; forum &middot; blog &nbsp;|&nbsp; multi-source retrieval</small>
+  </div>
+
+  <div class="status" id="status">
+    <div class="row"><span>corpus</span><b class="mono">&hellip;</b></div>
+  </div>
+
+  <button class="side-btn primary" id="newchat">＋ New chat <span class="k">Esc</span></button>
+
+  <div class="side-label">Tools</div>
+  <button class="side-btn" data-run="evaluate">📊 Evaluate gold set <span class="k">15 q</span></button>
+  <button class="side-btn" data-run="ablate">🧪 Ablation study <span class="k">~7 s</span></button>
+  <button class="side-btn" data-run="rebuild">🔁 Rebuild indices</button>
+  <button class="side-btn" id="logbtn">🧾 Trace log</button>
+
+  <div class="side-label">Sources</div>
+  <div class="legend">
+    <div><span class="dot" style="background:var(--docs)"></span> documentation — canonical</div>
+    <div><span class="dot" style="background:var(--forum)"></span> forum — votes, accepted, role</div>
+    <div><span class="dot" style="background:var(--blog)"></span> blog — rationale, dated</div>
+  </div>
+
+  <div class="side-label">This session</div>
+  <div class="hist" id="hist"></div>
+</aside>
+
+<main>
+  <div id="scroll"><div class="wrap" id="chat"></div></div>
+  <div class="composer">
+    <div class="cin">
+      <div class="box">
+        <textarea id="q" rows="1" placeholder="Ask about retries, rate limits, the DLQ, migrations&hellip;"></textarea>
+        <button class="send" id="send" title="Send (Enter)">↑</button>
+      </div>
+      <div class="hintline">
+        <span>Enter sends &middot; Shift+Enter newline</span>
+        <span id="foot">answers are extractive and cited — no model invents text</span>
+      </div>
+    </div>
+  </div>
+</main>
+
+<div class="scrim" id="scrim"></div>
+<div class="drawer" id="drawer">
+  <header><span class="t" id="dtitle">Detail</span><button class="x" id="dclose">✕</button></header>
+  <div class="in" id="dbody"></div>
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+const chat = $('#chat'), scroll = $('#scroll'), qbox = $('#q');
+let meta = null, busy = false, turns = 0;
+
+const esc = s => String(s == null ? '' : s)
+  .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+/* The extractive synthesizer emits a light markdown: **bold**, *em*, `code`,
+   "### heading", "- bullet", and "**Source — label:**" lead-ins. Render just
+   that, so nothing in a corpus passage can inject markup. */
+function render(md){
+  const lines = esc(md).split('\n');
+  let out = '', inUl = false;
+  const inline = s => s
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+    .replace(/(^|[\s(])\*([^*\n]+)\*/g, '$1<em>$2</em>');
+  for (let raw of lines){
+    const line = raw.trimEnd();
+    if (/^#{2,4}\s/.test(line)){
+      if (inUl){ out += '</ul>'; inUl = false; }
+      out += '<h4>' + inline(line.replace(/^#{2,4}\s/,'')) + '</h4>'; continue;
+    }
+    const li = line.match(/^(\s*)[-*]\s+(.*)$/);
+    if (li){
+      if (!inUl){ out += '<ul>'; inUl = true; }
+      out += '<li>' + inline(li[2]) + '</li>'; continue;
+    }
+    if (inUl){ out += '</ul>'; inUl = false; }
+    const lead = line.match(/^\*\*(Documentation|Forum|Blog)([^*]*)\*\*(.*)$/);
+    if (lead){
+      out += '<span class="src">' + esc(lead[1] + lead[2]) + '</span>' + inline(lead[3]) + '\n';
+      continue;
+    }
+    out += (line ? inline(line) : '') + '\n';
+  }
+  if (inUl) out += '</ul>';
+  return out;
+}
+
+const SRC = {docs:'docs', forum:'forum', blog:'blog'};
+const HARD = ['contradict','contradiction','misconception','version_drift','deprecated','docs_gap'];
+const SOFT = ['complementary','agreement','conditional'];
+
+function conflictClass(rel){
+  if (SOFT.includes(rel)) return 'soft';
+  if (HARD.includes(rel)) return 'hard';
+  return '';
+}
+
+function badge(c){
+  const mv = (c.rank_before != null && c.rank_after != null && c.rank_before > c.rank_after)
+    ? `<span class="mv">#${c.rank_before}→#${c.rank_after}</span>` : '';
+  return `<button class="badge ${SRC[c.source]||''}" data-chunk="${esc(c.chunk_id)}" title="${esc(c.quote||'')}">
+    <span class="pill">${esc(c.source)}</span><span>${esc(c.label)}</span>${mv}</button>`;
+}
+
+function traceTable(d){
+  const rows = d.moves.map((m,i) => {
+    const delta = m.rank_before - m.rank_after;
+    const cls = delta > 0 ? 'up' : (delta < 0 ? 'down' : 'flat');
+    const sign = delta > 0 ? '+' + delta : (delta < 0 ? String(delta) : '·');
+    return `<tr>
+      <td class="n">${i+1}</td>
+      <td class="n">${m.rank_before}</td>
+      <td class="n ${cls}">${sign}</td>
+      <td class="n">${m.retrieval_score.toFixed(3)}</td>
+      <td class="n">${m.ce_score == null ? '—' : m.ce_score.toFixed(3)}</td>
+      <td class="n">${m.final_score.toFixed(3)}</td>
+      <td><button class="linkbtn" data-chunk="${esc(m.chunk_id)}">${esc(m.chunk_id)}</button></td>
+    </tr>`;
+  }).join('');
+
+  const nonc = d.non_conflicts.length
+    ? `<p style="margin-top:10px;font-size:12px;color:var(--dim)">Considered and <b>not</b> flagged
+       (${d.non_conflicts.length}): ${d.non_conflicts.map(n =>
+         `<span class="mono">${esc(n.relationship)}</span>&nbsp;${esc(n.topic||'')}`).join(' &middot; ')}</p>`
+    : '';
+
+  const t = d.timing_ms || {};
+  const stages = Object.keys(t).filter(k => k !== 'total')
+    .map(k => `${k} ${t[k]}ms`).join(' &middot; ');
+
+  const rr = d.rerank || {};
+  const summary = d.pool
+    ? `pool ${d.pool} candidates, reranked` +
+      (rr.mean_abs_rank_delta == null ? '' : `, mean |Δrank| ${rr.mean_abs_rank_delta}`) +
+      (rr.top1_changed ? ', top-1 changed' : '')
+    : 'no candidates passed the filters — nothing to rank';
+
+  return `<details class="trace"><summary>Decision trace — ${summary}</summary>
+    <div class="in">
+      <table>
+        <tr><th class="n">#</th><th class="n">was</th><th class="n">move</th>
+            <th class="n">retrieval</th><th class="n">CE</th><th class="n">final</th><th>chunk</th></tr>
+        ${rows}
+      </table>
+      ${nonc}
+      <p style="margin-top:10px;font-size:11.5px;color:var(--dim2)" class="mono">
+        trace ${esc(d.trace_id)} &middot; pool ${JSON.stringify(d.pool_by_source)}${rr.alpha == null ? '' : ` &middot; α=${rr.alpha}`} &middot; ${stages}</p>
+    </div></details>`;
+}
+
+function greetingBlock(d){
+  return `<div class="answer" data-md="${encodeURIComponent(d.answer)}"></div>
+    <div class="chips" style="margin-top:14px">${(d.suggestions||[]).map(s =>
+      `<button class="chip" data-ask="${esc(s.q)}">
+         <span class="t">${esc(s.tag)}</span>
+         <span class="q">${esc(s.q)}</span>
+         <span class="h">${esc(s.hint)}</span></button>`).join('')}</div>`;
+}
+
+function answerBlock(d){
+  const w = d.weights || {};
+  const wtags = ['docs','forum','blog'].filter(s => w[s] != null)
+    .map(s => `<span class="tag ${s}">${s} <b>${w[s].toFixed(2)}</b></span>`).join('');
+  const used = Object.entries(d.source_distribution || {})
+    .map(([s,n]) => `${s} ${n}`).join(' / ');
+  const usedTag = used ? `<span class="tag">sources used <b>${esc(used)}</b></span>` : '';
+
+  const conflicts = d.conflicts.map(c => {
+    const cls = conflictClass(c.relationship);
+    const winner = c.winner, loser = c.loser;
+    const claim = (txt, id, role) => `<div class="claim ${role}">
+        <span class="mark">${role === 'w' ? 'upheld' : (role === 'l' ? 'rejected' : 'claim')}</span>
+        <span>${esc((txt||'').split('\n')[0]).slice(0,220)}</span></div>`;
+    const aRole = winner === c.chunk_a ? 'w' : (loser === c.chunk_a ? 'l' : '');
+    const bRole = winner === c.chunk_b ? 'w' : (loser === c.chunk_b ? 'l' : '');
+    return `<div class="conf ${cls}">
+      <div class="hd">
+        <span class="rel">${esc(c.relationship)}</span>
+        <span class="tag">${esc(c.topic||'')}</span>
+        <span class="tag">rule <b>${esc(c.rule)}</b></span>
+        <span class="tag">conf <b>${c.confidence}</b></span>
+      </div>
+      <div class="why">${esc(c.explanation)}</div>
+      <div class="claims">${claim(c.claim_a, c.chunk_a, aRole)}${claim(c.claim_b, c.chunk_b, bRole)}</div>
+    </div>`;
+  }).join('');
+
+  const noConflictNote = (!d.conflicts.length && d.non_conflicts.length)
+    ? `<div class="conf soft"><div class="hd"><span class="rel">no contradiction</span>
+        <span class="tag">${d.non_conflicts.length} pair(s) classified <b>complementary</b></span></div>
+        <div class="why">Differing values that describe different components are not a conflict, so no warning is raised.</div></div>`
+    : '';
+
+  return `
+    <div class="answer" data-md="${encodeURIComponent(d.answer)}"></div>
+    <div class="meta">
+      ${d.refused ? '<span class="tag refused">refused — out of corpus</span>' : ''}
+      <span class="tag">intent <b>${esc(d.intent)}</b></span>
+      ${d.product_area ? `<span class="tag">area <b>${esc(d.product_area)}</b></span>` : ''}
+      ${d.version ? `<span class="tag">v<b>${esc(d.version)}</b></span>` : ''}
+      ${wtags}
+      ${usedTag}
+      <span class="tag ms">${d.latency_ms} ms</span>
+    </div>
+    ${conflicts}${noConflictNote}
+    ${d.citations.length ? `<div class="sources">${d.citations.map(badge).join('')}</div>` : ''}
+    ${traceTable(d)}`;
+}
+
+/* ---------- chat flow ---------- */
+
+function hero(){
+  chat.innerHTML = `<div class="hero">
+    <h1>Ask about Zephyr</h1>
+    <p>Answers are assembled from three knowledge sources — product documentation, the community
+       forum, and the engineering blog — then reranked, checked for contradictions, and cited.
+       Nothing is generated from outside the corpus.</p>
+    <div class="chips">${(meta?.suggestions||[]).map(s =>
+      `<button class="chip" data-ask="${esc(s.q)}">
+         <span class="t">${esc(s.tag)}</span>
+         <span class="q">${esc(s.q)}</span>
+         <span class="h">${esc(s.hint)}</span></button>`).join('')}</div>
+  </div>`;
+}
+
+function addUser(text){
+  if (!turns) chat.innerHTML = '';
+  turns++;
+  const el = document.createElement('div');
+  el.className = 'msg user';
+  el.innerHTML = `<div class="av">YOU</div><div class="body">${esc(text)}</div>`;
+  chat.appendChild(el);
+  const h = document.createElement('button');
+  h.textContent = text; h.title = text;
+  h.onclick = () => ask(text);
+  $('#hist').prepend(h);
+  jump();
+}
+
+function addBot(){
+  const el = document.createElement('div');
+  el.className = 'msg bot';
+  el.innerHTML = `<div class="av">RAG</div><div class="body"><span class="spin"></span>
+    <span style="color:var(--dim);font-size:13px"> retrieving across three sources&hellip;</span></div>`;
+  chat.appendChild(el); jump();
+  return el.querySelector('.body');
+}
+
+const jump = () => { scroll.scrollTop = scroll.scrollHeight; };
+
+/* Reveal the answer progressively. The pipeline is extractive and returns in
+   ~30 ms, so this is presentation only -- the real latency is on the badge. */
+function reveal(host, md, done){
+  const words = md.split(/(\s+)/);
+  let i = 0;
+  host.innerHTML = '<span class="out"></span><span class="cursor"></span>';
+  const out = host.querySelector('.out');
+  const tick = () => {
+    const step = Math.max(2, Math.round(words.length / 90));
+    i = Math.min(words.length, i + step);
+    out.innerHTML = render(words.slice(0, i).join(''));
+    jump();
+    if (i < words.length) setTimeout(tick, 16);
+    else { host.querySelector('.cursor')?.remove(); done(); }
+  };
+  tick();
+}
+
+async function ask(question){
+  if (busy || !question.trim()) return;
+  busy = true; $('#send').disabled = true;
+  addUser(question.trim());
+  const body = addBot();
+  try{
+    const r = await fetch('/api/ask', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({question})
+    });
+    const d = await r.json();
+    if (d.error){ body.innerHTML = `<div class="err">${esc(d.error)}</div>`; return; }
+    body.innerHTML = d.kind === 'greeting' ? greetingBlock(d) : answerBlock(d);
+    const host = body.querySelector('.answer');
+    reveal(host, decodeURIComponent(host.dataset.md), jump);
+  }catch(e){
+    body.innerHTML = `<div class="err">${esc(e.message)} — is the server still running?</div>`;
+  }finally{
+    busy = false; $('#send').disabled = false; qbox.focus();
+  }
+}
+
+/* ---------- drawer ---------- */
+
+function openDrawer(title, html){
+  $('#dtitle').textContent = title;
+  $('#dbody').innerHTML = html;
+  $('#drawer').classList.add('on'); $('#scrim').classList.add('on');
+}
+function closeDrawer(){
+  $('#drawer').classList.remove('on'); $('#scrim').classList.remove('on');
+}
+$('#dclose').onclick = closeDrawer; $('#scrim').onclick = closeDrawer;
+
+async function showChunk(id){
+  openDrawer(id, '<span class="spin"></span>');
+  const d = await (await fetch('/api/chunk?id=' + encodeURIComponent(id))).json();
+  if (d.error) return openDrawer(id, `<div class="err">${esc(d.error)}</div>`);
+  const m = d.metadata || {};
+  const kv = Object.entries(m).slice(0, 14)
+    .map(([k,v]) => `<dt>${esc(k)}</dt><dd class="mono">${esc(typeof v === 'object' ? JSON.stringify(v) : v)}</dd>`).join('');
+  openDrawer(d.label || id, `
+    <dl class="kv">
+      <dt>chunk id</dt><dd class="mono">${esc(d.chunk_id)}</dd>
+      <dt>source</dt><dd>${esc(d.source)}</dd>
+      <dt>tokens</dt><dd class="mono">${d.tokens}</dd>
+      <dt>context header</dt><dd class="mono">${esc(d.context_header)}</dd>
+      ${kv}
+    </dl>
+    <pre>${esc(d.text)}</pre>`);
+}
+
+async function runAction(action, label){
+  openDrawer(label, '<span class="spin"></span> running&hellip;');
+  const r = await fetch('/api/run', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({action})
+  });
+  const d = await r.json();
+  if (d.error) return openDrawer(label, `<div class="err">${esc(d.error)}</div>`);
+  openDrawer(`${label} — ${d.elapsed_s}s`, `<pre>${esc(d.output)}</pre>`);
+  if (action === 'rebuild') loadMeta();
+}
+
+async function showLog(){
+  openDrawer('Trace log', '<span class="spin"></span>');
+  const d = await (await fetch('/api/log?n=8')).json();
+  const recs = (d.records || []).map(r => {
+    const dist = Object.entries(r.source_distribution || {}).map(([s,n]) => `${s} ${n}`).join(' / ');
+    const conf = (r.conflicts || []).map(c => `${c.relationship} → ${c.rule_fired}`).join(', ') || 'none';
+    return `<pre>${esc(JSON.stringify({
+      trace_id: r.trace_id, timestamp: r.timestamp, query: r.query,
+      intent: r.analysis?.intent, weights_applied: r.weights_applied,
+      sources_used: dist, conflicts: conf,
+      citations: (r.citations||[]).map(c => c.chunk_id),
+      refused: r.refused, total_ms: r.timing_ms?.total
+    }, null, 2))}</pre>`;
+  }).join('');
+  openDrawer(`Trace log — ${d.total || 0} records`,
+    `<p style="font-size:12px;color:var(--dim);margin-bottom:10px" class="mono">${esc(d.path||'')}</p>${recs || 'empty'}`);
+}
+
+/* ---------- wiring ---------- */
+
+document.addEventListener('click', e => {
+  const chunk = e.target.closest('[data-chunk]');
+  if (chunk) return showChunk(chunk.dataset.chunk);
+  const chip = e.target.closest('[data-ask]');
+  if (chip) return ask(chip.dataset.ask);
+  const run = e.target.closest('[data-run]');
+  if (run) return runAction(run.dataset.run, run.textContent.trim().replace(/\s+\S+\s*$/, ''));
+});
+$('#logbtn').onclick = showLog;
+$('#newchat').onclick = () => { turns = 0; hero(); qbox.focus(); };
+
+qbox.addEventListener('input', () => {
+  qbox.style.height = 'auto';
+  qbox.style.height = Math.min(160, qbox.scrollHeight) + 'px';
+});
+qbox.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey){
+    e.preventDefault();
+    const v = qbox.value; qbox.value = ''; qbox.style.height = 'auto';
+    ask(v);
+  }
+});
+$('#send').onclick = () => {
+  const v = qbox.value; qbox.value = ''; qbox.style.height = 'auto'; ask(v);
+};
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape'){ closeDrawer(); }
+  if (e.key === '/' && document.activeElement !== qbox){ e.preventDefault(); qbox.focus(); }
+});
+
+async function loadMeta(){
+  meta = await (await fetch('/api/meta')).json();
+  const c = meta.counts || {};
+  $('#status').innerHTML = `
+    <div class="row"><span>chunks</span><b class="mono">${meta.total}</b></div>
+    <div class="row"><span>docs / forum / blog</span><b class="mono">${c.docs||0} / ${c.forum||0} / ${c.blog||0}</b></div>
+    <div class="row"><span>config</span><b class="mono">${esc(meta.config)}</b></div>
+    <div class="row"><span>generator</span><b class="mono">${esc(meta.generator)}</b></div>
+    <div class="row"><span>indexed at</span><b class="mono">${esc(meta.built_at)}</b></div>`;
+  if (!turns) hero();
+}
+loadMeta().then(() => qbox.focus());
+</script>
+</body>
+</html>

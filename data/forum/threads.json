@@ -1,0 +1,276 @@
+{
+  "_comment": "Forum corpus. Each thread is a conversation; the chunker pairs the opening question with ONE answer per chunk so competing answers can be ranked (and contradicted) independently. Vote counts and author roles drive the authority signal; is_accepted marks what the OP accepted, which is deliberately NOT always correct (see t_0007).",
+  "threads": [
+    {
+      "thread_id": "t_0007",
+      "title": "Does timeout=0 disable the job timeout?",
+      "tags": ["timeouts", "configuration"],
+      "product_version_mentioned": "3.2",
+      "status": "solved",
+      "views": 18422,
+      "created_at": "2026-02-11",
+      "posts": [
+        {"post_id": "p1", "author_role": "user", "author": "dmitri_k", "created_at": "2026-02-11", "votes": 31, "is_accepted": false, "parent_post_id": null,
+         "body": "I have a long-running report job that keeps getting killed partway through. I want to let it run as long as it needs. Someone told me to set timeout=0 to turn the timeout off entirely. Is that right?\n\nclient.enqueue('reports', payload, timeout=0)"},
+        {"post_id": "p2", "author_role": "user", "author": "marco_builds", "created_at": "2026-02-11", "votes": 47, "is_accepted": true, "parent_post_id": "p1",
+         "body": "Yes, timeout=0 disables the timeout. Zero means no limit, same convention as most HTTP clients and socket libraries. I use timeout=0 on all my long transcode jobs and they run for 20+ minutes without being killed. Just set it and you are fine."},
+        {"post_id": "p3", "author_role": "staff", "author": "jen_zephyr", "created_at": "2026-02-14", "votes": 12, "is_accepted": false, "parent_post_id": "p1",
+         "body": "This accepted answer is wrong and I want to correct it before it spreads further. timeout=0 does NOT disable the timeout in Zephyr. It means fail-fast: the attempt is abandoned immediately and the job fails on its first attempt, then retries per the retry policy.\n\nIf you genuinely want no per-attempt limit, omit timeout or pass timeout=None. For long jobs the better pattern is a generous timeout plus job.heartbeat() to extend the lease as you make progress.\n\nIf marco's transcode jobs are completing, they are completing on a retry after the first attempt fails instantly, which is not the behaviour he thinks he is getting."},
+        {"post_id": "p4", "author_role": "user", "author": "dmitri_k", "created_at": "2026-02-15", "votes": 8, "is_accepted": false, "parent_post_id": "p3",
+         "body": "Confirmed. I checked attempt_count on my jobs and every single one shows attempt 2. The first attempt was failing instantly the whole time. timeout=None is what I actually wanted."}
+      ]
+    },
+    {
+      "thread_id": "t_0012",
+      "title": "Can I see the payload of a dead-lettered job from the CLI?",
+      "tags": ["dlq", "cli", "debugging"],
+      "product_version_mentioned": "3.2",
+      "status": "solved",
+      "views": 4103,
+      "created_at": "2026-05-02",
+      "posts": [
+        {"post_id": "p1", "author_role": "user", "author": "sana_p", "created_at": "2026-05-02", "votes": 14, "is_accepted": false, "parent_post_id": null,
+         "body": "zephyr dlq list gives me the job id, attempt count and error class, but not the payload. I need the payload to work out which records failed. Do I have to fetch each job through the SDK one at a time, or is there a CLI way?"},
+        {"post_id": "p2", "author_role": "staff", "author": "ravi_zephyr", "created_at": "2026-05-02", "votes": 29, "is_accepted": true, "parent_post_id": "p1",
+         "body": "There is an undocumented flag for exactly this:\n\nzephyr dlq list --queue emails --include-payload\n\nIt adds a payload column, and with --json you get the full payload object per entry. It is not on the CLI reference page yet, which is an oversight on our side rather than a deliberate omission; I have filed a docs ticket.\n\nTwo caveats: payloads are truncated to 2 KiB in table output (use --json for the full object), and the flag increases response size substantially, so pair it with --limit when you are scanning a large DLQ.\n\nzephyr dlq list --queue emails --include-payload --json --limit 20"},
+        {"post_id": "p3", "author_role": "user", "author": "sana_p", "created_at": "2026-05-03", "votes": 5, "is_accepted": false, "parent_post_id": "p2",
+         "body": "Works perfectly, thank you. Worth noting for anyone else that --include-payload does not appear in zephyr dlq list --help either, so there was no way to discover it."}
+      ]
+    },
+    {
+      "thread_id": "t_0019",
+      "title": "CLI will not start on Windows - credential_store_unreadable",
+      "tags": ["cli", "windows", "installation"],
+      "product_version_mentioned": "3.0",
+      "status": "solved",
+      "views": 9871,
+      "created_at": "2026-02-28",
+      "posts": [
+        {"post_id": "p1", "author_role": "user", "author": "tom_h", "created_at": "2026-02-28", "votes": 38, "is_accepted": false, "parent_post_id": null,
+         "body": "Fresh install of zephyr-cli on Windows 11. Every command fails immediately:\n\n$ zephyr queues list\nError: credential_store_unreadable\n\nSame on two different Windows machines. Works fine on my Mac with an identical config. Is the CLI just broken on Windows? I am on 3.0.4."},
+        {"post_id": "p2", "author_role": "mvp", "author": "lena_ops", "created_at": "2026-02-28", "votes": 41, "is_accepted": true, "parent_post_id": "p1",
+         "body": "The CLI is broken on Windows in 3.0 - this is a known bug, not a config problem on your end. The credential store resolves ~/.config/zephyr/credentials through a symlink check that assumes POSIX symlink semantics, and it throws on Windows regardless of whether a symlink is involved. Every 3.0.x release is affected on every Windows host.\n\nWorkaround until you can upgrade: bypass the credential store entirely by setting the env var, which is read before the file is touched.\n\nsetx ZEPHYR_API_KEY zq_live_yourkey\n\nThen open a new terminal. That got me unblocked for weeks."},
+        {"post_id": "p3", "author_role": "staff", "author": "jen_zephyr", "created_at": "2026-04-23", "votes": 22, "is_accepted": false, "parent_post_id": "p1",
+         "body": "Following up now that 3.1 has shipped: the symlink resolution bug is fixed, and Windows is a fully supported platform from 3.1 onward. pip install --upgrade zephyr-cli to pick it up. Anyone still pinned to 3.0.x will keep hitting this; the env var workaround lena described remains the only option on that version."}
+      ]
+    },
+    {
+      "thread_id": "t_0023",
+      "title": "Best way to enqueue in bulk from a cron script?",
+      "tags": ["sdk", "enqueue", "batch"],
+      "product_version_mentioned": "3.1",
+      "status": "solved",
+      "views": 3320,
+      "created_at": "2025-09-14",
+      "posts": [
+        {"post_id": "p1", "author_role": "user", "author": "priya_r", "created_at": "2025-09-14", "votes": 9, "is_accepted": false, "parent_post_id": null,
+         "body": "I have a nightly script that needs to enqueue around 4000 jobs. What is the recommended call pattern so I do not hit the rate limit?"},
+        {"post_id": "p2", "author_role": "user", "author": "oldtimer_jay", "created_at": "2025-09-14", "votes": 17, "is_accepted": true, "parent_post_id": "p1",
+         "body": "Chunk it and use push in a loop. Something like:\n\nfor batch in chunked(items, 100):\n    for item in batch:\n        client.queue.push('nightly', item)\n    time.sleep(0.5)\n\nThat is the pattern I have used since 2.x and it has never let me down. push is the enqueue call."},
+        {"post_id": "p3", "author_role": "staff", "author": "ravi_zephyr", "created_at": "2025-09-16", "votes": 25, "is_accepted": false, "parent_post_id": "p2",
+         "body": "Careful with that snippet - client.queue.push() is the pre-v3 API. It still works in 3.x but it is deprecated, emits a DeprecationWarning, and is scheduled for removal in 4.0. It also cannot take an idempotency_key, which you really want in a nightly cron that might get re-run.\n\nThe current call is client.enqueue(), and for bulk work use enqueue_many(), which sends up to 100 jobs as a single request and therefore costs one unit of rate-limit quota instead of 100:\n\nfor batch in chunked(items, 100):\n    client.enqueue_many('nightly', batch)\n\n4000 jobs becomes 40 requests, nowhere near the 600 rpm quota, and you can drop the sleep entirely."}
+      ]
+    },
+    {
+      "thread_id": "t_0031",
+      "title": "How long until dead-lettered jobs get retried?",
+      "tags": ["dlq", "retries"],
+      "product_version_mentioned": "3.2",
+      "status": "solved",
+      "views": 2210,
+      "created_at": "2026-06-18",
+      "posts": [
+        {"post_id": "p1", "author_role": "user", "author": "felix_m", "created_at": "2026-06-18", "votes": 6, "is_accepted": false, "parent_post_id": null,
+         "body": "Some jobs went to the DLQ during a database outage last night. The outage is over. How long do I wait for them to be picked back up automatically?"},
+        {"post_id": "p2", "author_role": "user", "author": "quickanswer_99", "created_at": "2026-06-18", "votes": 3, "is_accepted": false, "parent_post_id": "p1",
+         "body": "I believe the DLQ sweeps and replays automatically about once an hour, so they should come back on their own. I would give it until the next hour boundary before doing anything manually."},
+        {"post_id": "p3", "author_role": "staff", "author": "jen_zephyr", "created_at": "2026-06-19", "votes": 18, "is_accepted": true, "parent_post_id": "p1",
+         "body": "That is not correct, and waiting will not help - there is no automatic replay of any kind. No sweep, no timer, no hourly job. A dead-lettered job stays in the DLQ until you replay it or delete it, and it is deleted permanently after 30 days.\n\nThis is intentional: a job that already failed six times usually fails a seventh, and automatic replay would turn a broken handler into an unbounded loop.\n\nFor your outage case, bulk replay is what you want:\n\nzephyr dlq replay-all --queue <q> --limit 500\n\nOr client.dlq.replay_all(queue='...', limit=500). Fix the cause first, then replay - replaying into a still-broken dependency just refills the DLQ."}
+      ]
+    },
+    {
+      "thread_id": "t_0035",
+      "title": "Agent ignores my concurrency setting?",
+      "tags": ["concurrency", "self-hosted", "agent"],
+      "product_version_mentioned": "3.2",
+      "status": "solved",
+      "views": 1876,
+      "created_at": "2026-07-22",
+      "posts": [
+        {"post_id": "p1", "author_role": "user", "author": "carl_v", "created_at": "2026-07-22", "votes": 7, "is_accepted": false, "parent_post_id": null,
+         "body": "Running zephyr-agent on a 32-core box. I expected 10 concurrent handlers based on what I read about defaults, but I am seeing 32 in flight at once. Is the default being ignored?"},
+        {"post_id": "p2", "author_role": "staff", "author": "ravi_zephyr", "created_at": "2026-07-22", "votes": 21, "is_accepted": true, "parent_post_id": "p1",
+         "body": "Nothing is being ignored - you are running a self-hosted agent, and agent concurrency defaults to the host CPU count, which is 32 on your box.\n\nThe figure of 10 you read applies to managed workers (zephyr worker start), which run on shared infrastructure where the visible CPU count tells you nothing useful about available capacity, so the default is a fixed number instead. Two different components, two different defaults.\n\nIf you want 10 on the agent, set it explicitly:\n\nzephyr-agent start --queue emails --concurrency 10"}
+      ]
+    },
+    {
+      "thread_id": "t_0041",
+      "title": "Jobs retry forever when the API returns 429",
+      "tags": ["rate_limits", "retries", "429"],
+      "product_version_mentioned": "3.0",
+      "status": "solved",
+      "views": 22150,
+      "created_at": "2026-03-04",
+      "posts": [
+        {"post_id": "p1", "author_role": "user", "author": "hannah_t", "created_at": "2026-03-04", "votes": 56, "is_accepted": false, "parent_post_id": null,
+         "body": "During our evening peak the API starts returning 429 and then everything falls apart. Jobs retry in a tight loop, burn through all 5 attempts in well under a minute, and land in the DLQ.\n\nThe 429 responses clearly carry Retry-After: 30, so I expected the SDK to wait 30 seconds between attempts. Instead the gaps are about 1s, 2s, 4s, 8s. It behaves exactly as if Retry-After is not being read at all. Running SDK 3.0.7."},
+        {"post_id": "p2", "author_role": "mvp", "author": "lena_ops", "created_at": "2026-03-04", "votes": 63, "is_accepted": true, "parent_post_id": "p1",
+         "body": "You are not imagining it - the 3.0 SDK parses Retry-After and then discards it, falling back to plain exponential backoff. I packet-captured this to be sure.\n\nThe documented behaviour (honour Retry-After) is correct for 3.1+, but on 3.0 it is simply not implemented, so under sustained rate limiting your whole retry budget is spent inside the window the server asked you to wait out.\n\nUpgrade to 3.1 or later and it behaves as documented. If you are stuck on 3.0, catch RateLimited and re-enqueue with an explicit delay instead of letting the automatic retry handle it:\n\nexcept RateLimited as e:\n    client.enqueue(q, payload, delay_seconds=e.retry_after)"},
+        {"post_id": "p3", "author_role": "user", "author": "hannah_t", "created_at": "2026-03-06", "votes": 19, "is_accepted": false, "parent_post_id": "p2",
+         "body": "Upgraded to 3.1.2 and the retry gaps now match Retry-After exactly. DLQ has been empty for two days through two peak windows that would previously have filled it."}
+      ]
+    },
+    {
+      "thread_id": "t_0052",
+      "title": "DLQ fills up during traffic spikes even though nothing is actually broken",
+      "tags": ["dlq", "rate_limits", "429"],
+      "product_version_mentioned": "3.0",
+      "status": "solved",
+      "views": 7740,
+      "created_at": "2026-03-19",
+      "posts": [
+        {"post_id": "p1", "author_role": "user", "author": "ben_oz", "created_at": "2026-03-19", "votes": 24, "is_accepted": false, "parent_post_id": null,
+         "body": "Every marketing send pushes a few hundred jobs into the DLQ. last_error is RateLimited on all of them. The handler is fine - if I replay them afterwards they all succeed. It looks like the retries are not spacing themselves out during the spike."},
+        {"post_id": "p2", "author_role": "user", "author": "sana_p", "created_at": "2026-03-19", "votes": 27, "is_accepted": true, "parent_post_id": "p1",
+         "body": "Same thing bit us. On 3.0 the SDK does not respect Retry-After, so when you get a 429 asking you to wait 30s, it waits 1s, then 2s, then 4s, and the retry budget is gone before the rate-limit window closes. Independent of the handler being healthy.\n\n3.1 fixed it for us - identical workload, DLQ stayed empty. Worth checking your exact SDK version, we thought we were on 3.1 and were actually pinned to 3.0.9 by a transitive dependency."}
+      ]
+    },
+    {
+      "thread_id": "t_0063",
+      "title": "Retry-After header seems to be ignored - is this expected?",
+      "tags": ["rate_limits", "429", "sdk"],
+      "product_version_mentioned": "3.0",
+      "status": "solved",
+      "views": 5102,
+      "created_at": "2026-04-02",
+      "posts": [
+        {"post_id": "p1", "author_role": "user", "author": "yuki_n", "created_at": "2026-04-02", "votes": 21, "is_accepted": false, "parent_post_id": null,
+         "body": "The docs say the SDK honours Retry-After on 429 responses. I logged every attempt timestamp and the intervals are 1.0s, 1.9s, 4.1s, 8.0s regardless of what Retry-After says - I have seen it set to 12 and to 45 and the intervals do not change. Is the documentation describing intended behaviour rather than shipped behaviour?"},
+        {"post_id": "p2", "author_role": "staff", "author": "jen_zephyr", "created_at": "2026-04-03", "votes": 30, "is_accepted": true, "parent_post_id": "p1",
+         "body": "Your reading is right and the docs were ahead of the implementation for 3.0. The header was parsed but never applied to scheduling. It is fixed in 3.1, released last week, and the reference page describes 3.1+ behaviour. Apologies for the confusion - we should have version-gated that paragraph. Upgrade to 3.1.0 or later and the intervals will track Retry-After."}
+      ]
+    },
+    {
+      "thread_id": "t_0044",
+      "title": "413 payload_too_large but my payload looks small",
+      "tags": ["payloads", "413"],
+      "product_version_mentioned": "3.2",
+      "status": "solved",
+      "views": 3914,
+      "created_at": "2026-05-28",
+      "posts": [
+        {"post_id": "p1", "author_role": "user", "author": "nadia_s", "created_at": "2026-05-28", "votes": 11, "is_accepted": false, "parent_post_id": null,
+         "body": "Getting 413 payload_too_large with received_bytes 491020. But the dict I am passing has maybe 40 keys. What is inflating it?"},
+        {"post_id": "p2", "author_role": "mvp", "author": "lena_ops", "created_at": "2026-05-28", "votes": 19, "is_accepted": true, "parent_post_id": "p1",
+         "body": "Almost always base64. If any of those 40 keys holds a file, an image or a PDF, base64 adds about 33% on top of the raw bytes and you blow past the 256 KiB limit fast.\n\nCheck the real serialised size rather than eyeballing the dict:\n\nlen(json.dumps(payload).encode('utf-8'))\n\nThe fix is the claim-check pattern - put the blob in object storage and enqueue the key instead of the bytes. Smaller payloads, cheaper retries, and you stop re-sending the blob on every attempt."}
+      ]
+    },
+    {
+      "thread_id": "t_0049",
+      "title": "Same job running twice - idempotency key not working?",
+      "tags": ["idempotency", "duplicates"],
+      "product_version_mentioned": "3.2",
+      "status": "solved",
+      "views": 8805,
+      "created_at": "2026-04-14",
+      "posts": [
+        {"post_id": "p1", "author_role": "user", "author": "omar_f", "created_at": "2026-04-14", "votes": 28, "is_accepted": false, "parent_post_id": null,
+         "body": "I pass an idempotency_key on every enqueue and I am still seeing charge handlers run twice for the same invoice. Is the key broken?"},
+        {"post_id": "p2", "author_role": "staff", "author": "ravi_zephyr", "created_at": "2026-04-14", "votes": 44, "is_accepted": true, "parent_post_id": "p1",
+         "body": "The key is working; it is solving a different problem than the one you have. idempotency_key deduplicates ENQUEUES - two enqueues with the same key create one job. It does not deduplicate DELIVERIES.\n\nZephyr is at-least-once, so one job can be delivered more than once: worker dies before acking, handler outruns the visibility timeout, network partition hides the ack. All three redeliver. So the handler itself has to be idempotent.\n\nCheck your visibility timeout first - handler runtime exceeding the 30s default is by far the most common cause of exactly this symptom. Then write a completion marker in the same transaction as the side effect."},
+        {"post_id": "p3", "author_role": "user", "author": "omar_f", "created_at": "2026-04-15", "votes": 12, "is_accepted": false, "parent_post_id": "p2",
+         "body": "That was it - the charge call takes about 35 seconds against our payment provider and the visibility timeout was the default 30. Raised it to 180 and added a marker row in the same transaction. No duplicates since."}
+      ]
+    },
+    {
+      "thread_id": "t_0055",
+      "title": "Everything returns 401 after upgrading to 3.x",
+      "tags": ["auth", "migration", "401"],
+      "product_version_mentioned": "3.0",
+      "status": "solved",
+      "views": 12440,
+      "created_at": "2026-01-22",
+      "posts": [
+        {"post_id": "p1", "author_role": "user", "author": "gus_w", "created_at": "2026-01-22", "votes": 33, "is_accepted": false, "parent_post_id": null,
+         "body": "Upgraded from 2.4 to 3.0 and now every single request is 401. The key is valid - it works from the old service that has not been upgraded yet. I regenerated it twice. What changed?"},
+        {"post_id": "p2", "author_role": "mvp", "author": "lena_ops", "created_at": "2026-01-22", "votes": 48, "is_accepted": true, "parent_post_id": "p1",
+         "body": "The auth header changed in 3.0. Authorization: Zephyr <key> was removed; it is X-Zephyr-Key: <key> now.\n\nThe error code gives it away if you look at the body rather than the status - unauthorized_header_form rather than revoked_api_key. Regenerating the key will never fix it.\n\nIf you are hand-rolling requests, change the header. If you are on the SDK, it handles this for you, so a 401 there means something is still sending the old header - usually a cached layer or a sidecar."}
+      ]
+    },
+    {
+      "thread_id": "t_0058",
+      "title": "What is the maximum number of jobs per enqueue_many call?",
+      "tags": ["batch", "enqueue"],
+      "product_version_mentioned": "3.2",
+      "status": "solved",
+      "views": 1540,
+      "created_at": "2026-08-05",
+      "posts": [
+        {"post_id": "p1", "author_role": "user", "author": "ling_z", "created_at": "2026-08-05", "votes": 5, "is_accepted": false, "parent_post_id": null,
+         "body": "Is there a documented cap on enqueue_many batch size? I am passing 500 at a time and getting errors."},
+        {"post_id": "p2", "author_role": "staff", "author": "jen_zephyr", "created_at": "2026-08-05", "votes": 13, "is_accepted": true, "parent_post_id": "p1",
+         "body": "100 per call. Over that you get invalid_batch_size and nothing is enqueued - it is not a partial accept.\n\nThe whole batch counts as a single request against the 600 rpm quota regardless of how many jobs it holds, which is why batching is the best lever for staying inside the quota. Chunk your 500 into five calls of 100."}
+      ]
+    },
+    {
+      "thread_id": "t_0061",
+      "title": "How do I check why a specific job failed?",
+      "tags": ["debugging", "status"],
+      "product_version_mentioned": "3.2",
+      "status": "solved",
+      "views": 2670,
+      "created_at": "2026-06-30",
+      "posts": [
+        {"post_id": "p1", "author_role": "user", "author": "ivan_d", "created_at": "2026-06-30", "votes": 8, "is_accepted": false, "parent_post_id": null,
+         "body": "A job failed and I have the job id from our logs. What is the fastest way to see what went wrong?"},
+        {"post_id": "p2", "author_role": "mvp", "author": "lena_ops", "created_at": "2026-06-30", "votes": 16, "is_accepted": true, "parent_post_id": "p1",
+         "body": "job = client.get_job('job_8f2a91c4') then look at job.status, job.attempt_count and job.last_error. last_error holds the exception class and message from the final attempt.\n\nIf attempt_count is higher than you expected, the job was redelivered rather than retried - check the visibility timeout against your handler runtime.\n\nFrom the CLI, zephyr dlq list --queue <q> --json gives you the same fields for everything that dead-lettered."}
+      ]
+    },
+    {
+      "thread_id": "t_0066",
+      "title": "Jobs being picked up by two workers at once",
+      "tags": ["concurrency", "visibility_timeout", "duplicates"],
+      "product_version_mentioned": "3.2",
+      "status": "solved",
+      "views": 6190,
+      "created_at": "2026-05-11",
+      "posts": [
+        {"post_id": "p1", "author_role": "user", "author": "rosa_b", "created_at": "2026-05-11", "votes": 22, "is_accepted": false, "parent_post_id": null,
+         "body": "Two different workers log the same job id within a minute of each other. I thought a claimed job was invisible to other workers. Is this a bug?"},
+        {"post_id": "p2", "author_role": "staff", "author": "ravi_zephyr", "created_at": "2026-05-11", "votes": 35, "is_accepted": true, "parent_post_id": "p1",
+         "body": "It is invisible, but only for the visibility timeout - 30 seconds by default since v3.0. If your handler has not acknowledged within that window the job becomes visible again and another worker legitimately claims it. So a handler that takes 45 seconds will always be double-executed on the default setting.\n\nTwo fixes, use both: raise the visibility timeout above your realistic worst case (client.update_queue('q', visibility_timeout=300)), and call job.heartbeat() periodically inside long handlers to extend the lease as you progress.\n\nNote the default used to be 60s in 2.x and dropped to 30s in 3.0, which catches a lot of people mid-upgrade - handlers that were fine for years suddenly double-run."}
+      ]
+    },
+    {
+      "thread_id": "t_0070",
+      "title": "Job disappeared without reaching the DLQ",
+      "tags": ["ttl", "debugging"],
+      "product_version_mentioned": "3.2",
+      "status": "solved",
+      "views": 1980,
+      "created_at": "2026-07-08",
+      "posts": [
+        {"post_id": "p1", "author_role": "user", "author": "pedro_l", "created_at": "2026-07-08", "votes": 9, "is_accepted": false, "parent_post_id": null,
+         "body": "We paused our workers for about ten days during a migration. Some jobs enqueued before the pause are simply gone - not completed, not in the DLQ. Where did they go?"},
+        {"post_id": "p2", "author_role": "staff", "author": "jen_zephyr", "created_at": "2026-07-08", "votes": 17, "is_accepted": true, "parent_post_id": "p1",
+         "body": "Pending jobs have a 7-day TTL. A job that is still pending when its TTL expires is routed to the DLQ with error class TTLExpired - and DLQ entries are themselves retained for 30 days, so if the pause plus the migration ran long enough, the TTL expiry and then the DLQ retention window could both have elapsed.\n\nTen days of pause alone would put them in the DLQ as TTLExpired, so check there with a wider window:\n\nzephyr dlq list --queue <q> --limit 500 --json\n\nand filter for TTLExpired. If they are genuinely not there, the 30-day DLQ retention has passed and they are unrecoverable."}
+      ]
+    },
+    {
+      "thread_id": "t_0074",
+      "title": "Worker memory grows steadily over several days",
+      "tags": ["workers", "memory", "unresolved"],
+      "product_version_mentioned": "3.2",
+      "status": "unsolved",
+      "views": 2410,
+      "created_at": "2026-09-02",
+      "posts": [
+        {"post_id": "p1", "author_role": "user", "author": "aki_m", "created_at": "2026-09-02", "votes": 13, "is_accepted": false, "parent_post_id": null,
+         "body": "Worker RSS climbs from 180 MB to about 1.4 GB over four days, then the supervisor OOM-kills it. Concurrency 25, handlers are short, no obvious accumulation in my own code. Anyone seen this?"},
+        {"post_id": "p2", "author_role": "user", "author": "carl_v", "created_at": "2026-09-03", "votes": 4, "is_accepted": false, "parent_post_id": "p1",
+         "body": "Seeing something similar but slower at concurrency 10. No idea on cause. Restarting nightly as a workaround which is obviously not a fix."}
+      ]
+    }
+  ]
+}

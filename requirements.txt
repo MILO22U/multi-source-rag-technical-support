@@ -1,0 +1,14 @@
+# Core pipeline: pure Python standard library.
+# Deliberate -- the retrieval, fusion, reranking and contradiction stages run
+# with no third-party packages so results reproduce on any Python 3.10+ install.
+pyyaml>=6.0            # configuration files
+
+# --- Optional: real dense backends (swap in behind EmbeddingBackend protocol) ---
+# sentence-transformers>=3.0   # BAAI/bge-m3 embeddings + bge-reranker-v2-m3
+# numpy>=1.26                  # speeds up the LSA backend; not required
+
+# --- Optional: LLM stages (intent routing, contradiction judge, synthesis) ---
+# anthropic>=0.40              # requires ANTHROPIC_API_KEY
+
+# --- Development ---
+pytest>=8

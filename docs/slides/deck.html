@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Multi-Source RAG for Technical Support — 5-minute presentation</title>
+<style>
+  /* Self-contained: no network fonts, no CDN. Opens offline, records cleanly. */
+  :root{
+    --bg:#101418; --panel:#171d23; --line:#2b353e;
+    --fg:#e8edf2; --dim:#9aa7b3;
+    --a:#5aa9e6;  /* primary accent */
+    --b:#f2a25c;  /* secondary     */
+    --g:#67c99a;  /* good          */
+    --r:#e87b7b;  /* bad           */
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    background:var(--bg); color:var(--fg); overflow:hidden;
+    font-family:"Segoe UI",system-ui,-apple-system,Roboto,Helvetica,Arial,sans-serif;
+    font-size:calc(0.9vw + 0.9vh);
+  }
+  .slide{
+    position:absolute; inset:0; display:none;
+    flex-direction:column; justify-content:center;
+    padding:5vh 7vw 9vh;
+  }
+  .slide.on{display:flex}
+  h1{font-size:2.6em; line-height:1.12; letter-spacing:-.02em}
+  h2{font-size:1.75em; line-height:1.2; letter-spacing:-.015em; margin-bottom:.7em}
+  h2 .num{color:var(--a); font-weight:600; margin-right:.5em}
+  .sub{color:var(--dim); font-size:1.05em; margin-top:.9em; line-height:1.5}
+  ul{list-style:none; display:flex; flex-direction:column; gap:.55em}
+  li{font-size:1.05em; line-height:1.35; padding-left:1.4em; position:relative}
+  li::before{content:"\25B8"; color:var(--a); position:absolute; left:0}
+  li b{color:#fff}
+  .kicker{color:var(--b); text-transform:uppercase; letter-spacing:.16em;
+          font-size:.62em; font-weight:700; margin-bottom:1.1em}
+  code,.mono{font-family:Consolas,"Cascadia Mono",Menlo,monospace}
+  code{background:#000; color:var(--g); padding:.08em .35em; border-radius:4px; font-size:.92em}
+
+  table{border-collapse:collapse; width:100%; font-size:.86em}
+  th,td{padding:.42em .6em; text-align:left; border-bottom:1px solid var(--line)}
+  th{color:var(--dim); font-weight:600; font-size:.85em; text-transform:uppercase; letter-spacing:.07em}
+  td.n,th.n{text-align:right; font-family:Consolas,monospace}
+  tr.hi td{background:#1d2630; color:#fff; font-weight:600}
+  .win{color:var(--g); font-weight:700}
+  .lose{color:var(--r); font-weight:700}
+
+  .flow{display:flex; flex-direction:column; gap:.42em; align-items:center; font-size:.8em}
+  .row{display:flex; gap:.5em; width:100%; justify-content:center}
+  .box{background:var(--panel); border:1px solid var(--line); border-left:3px solid var(--a);
+       border-radius:6px; padding:.5em .7em; flex:1; min-width:0}
+  .box .t{font-weight:700; color:#fff}
+  .box .d{color:var(--dim); font-size:.85em; margin-top:.15em}
+  .box.b2{border-left-color:var(--b)}
+  .box.b3{border-left-color:var(--g)}
+  .arrow{color:var(--line); font-size:1.1em; line-height:1}
+
+  .cards{display:flex; gap:1em}
+  .card{flex:1; background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:1em 1.1em}
+  .card .big{font-size:2.1em; font-weight:700; color:var(--a); font-family:Consolas,monospace}
+  .card .lbl{color:var(--dim); font-size:.8em; margin-top:.25em; line-height:1.35}
+  .card.g .big{color:var(--g)} .card.r .big{color:var(--r)} .card.b .big{color:var(--b)}
+
+  footer{position:absolute; left:7vw; right:7vw; bottom:3.2vh; display:flex;
+         justify-content:space-between; color:var(--dim); font-size:.62em;
+         border-top:1px solid var(--line); padding-top:.7em}
+  #notes{position:absolute; left:0; right:0; bottom:0; max-height:42vh; overflow:auto;
+         background:rgba(0,0,0,.88); border-top:1px solid var(--a); padding:1.1em 7vw;
+         font-size:.72em; line-height:1.5; color:#dfe7ee; display:none; white-space:pre-wrap}
+  #notes.on{display:block}
+  #clock{position:absolute; top:2.2vh; right:7vw; color:var(--dim);
+          font-family:Consolas,monospace; font-size:.7em}
+  #clock.run{color:var(--g)} #clock.over{color:var(--r)}
+</style>
+</head>
+<body>
+<div id="clock">0:00 / 5:00</div>
+
+<!-- 1 ------------------------------------------------------------------ -->
+<section class="slide" data-notes="[0:00-0:20] Hi, I'm Mrinal. This is a multi-source RAG system for technical support. It answers customer questions about a fictional job-queue product, Zephyr, from three sources: product documentation, a community forum, and an engineering blog. It runs offline, and every number I quote reproduces from the README.">
+  <div class="kicker">Take-home &middot; 5 minutes</div>
+  <h1>Multi-Source RAG for<br>Technical Support</h1>
+  <div class="sub">Intent-conditioned retrieval and explicit contradiction resolution<br>
+  across documentation, forums, and technical blogs<br><br>
+  <span class="mono">Mrinal Bhardwaj &middot; 2 Oct 2026</span></div>
+</section>
+
+<!-- 2 ------------------------------------------------------------------ -->
+<section class="slide" data-notes="[0:20-0:42] Standard RAG asks one question: is this passage relevant? Support needs two more. Is it TRUSTWORTHY -- an accepted forum answer with forty-seven votes can be flatly wrong. And does it AGREE with the other sources? So I planted twelve specific contradictions in this corpus and made resolving them a first-class requirement.">
+  <h2><span class="num">1</span>Relevance is not enough</h2>
+  <ul>
+    <li><b>Relevant?</b> &mdash; what every RAG system asks</li>
+    <li><b>Trustworthy?</b> &mdash; a 47-vote <i>accepted</i> forum answer can be flatly wrong</li>
+    <li><b>Consistent?</b> &mdash; docs, forums and blogs disagree, and staying silent about it is worse than the wrong answer</li>
+  </ul>
+  <div class="sub">Corpus: 13 doc pages &middot; 17 forum threads &middot; 8 blog posts &middot; <b>12 deliberately planted conflicts</b>
+  (<span class="mono">data/conflicts_planted.json</span>)</div>
+  <footer><span>1 &middot; The problem</span><span>Multi-Source RAG for Technical Support</span></footer>
+</section>
+
+<!-- 3 ------------------------------------------------------------------ -->
+<section class="slide" data-notes="[0:42-1:16] Three sources, three chunkers -- a docs page, a forum thread and a blog post have different natural answer units. Forum chunks keep the question plus ONE answer, so competing answers stay in separate chunks. Each source gets its own BM25 and dense index; one global index lets a verbose forum swamp terse docs on volume alone. Fusion is rank-based RRF, weighted by intent, because BM25 and cosine scales aren't comparable. Then cheap recall into an expensive cross-encoder, with a floor of two per source. Twenty-seven milliseconds end to end.   >> then SWITCH TO TERMINAL after the next slide">
+  <h2><span class="num">2</span>Architecture</h2>
+  <div class="flow">
+    <div class="row">
+      <div class="box"><div class="t">docs &rarr; HeadingTreeChunker</div><div class="d">heading tree &middot; merge orphans &middot; never split code fences &middot; 23 chunks</div></div>
+      <div class="box b2"><div class="t">forum &rarr; ThreadQAChunker</div><div class="d">question + ONE answer per chunk &middot; votes / accepted / role kept &middot; 20</div></div>
+      <div class="box b3"><div class="t">blog &rarr; SlidingWindow</div><div class="d">700 tok, 15% overlap &middot; date + era-version header &middot; 11</div></div>
+    </div>
+    <div class="arrow">&#9660;</div>
+    <div class="row"><div class="box"><div class="t">Per-source hybrid indices &mdash; BM25 &times;3 + dense LSA-256 &times;3</div><div class="d">separate indices defeat corpus-size bias</div></div></div>
+    <div class="arrow">&#9660;</div>
+    <div class="row">
+      <div class="box b2"><div class="t">QueryAnalyzer</div><div class="d">6 intents &middot; version &rarr; hard filter &middot; expansions</div></div>
+      <div class="box b2"><div class="t">Weighted RRF (k=60)</div><div class="d">rank-based: BM25 and cosine scales are not comparable</div></div>
+      <div class="box b2"><div class="t">&ge;2 per-source floor</div><div class="d">without it, conflicts can never fire</div></div>
+    </div>
+    <div class="arrow">&#9660;</div>
+    <div class="row">
+      <div class="box b3"><div class="t">Cross-encoder rerank (&alpha;=0.7)</div><div class="d">joint features &middot; caps 5/src, 3/doc &middot; MMR &lambda;=0.7</div></div>
+      <div class="box b3"><div class="t">Conflict detection + cascade</div><div class="d">11-way taxonomy &rarr; precedence rules</div></div>
+      <div class="box b3"><div class="t">Synthesis + trace log</div><div class="d">answer &middot; citations &middot; queries.jsonl</div></div>
+    </div>
+  </div>
+  <footer><span>2 &middot; Requirements 1&ndash;2</span><span>54 chunks &middot; p50 27 ms end-to-end</span></footer>
+</section>
+
+<!-- 4 ------------------------------------------------------------------ -->
+<section class="slide" data-notes="[1:16-1:34] Requirement three: source reliability isn't constant. For API reference, docs are authoritative and the forum is mostly noise. For troubleshooting it inverts -- the forum outranks the docs, because someone already hit that error at 2am and posted the fix. For conceptual questions, the blog wins.   >> SWITCH TO TERMINAL: scripts\demo.ps1 (demos 1 and 2)">
+  <h2><span class="num">3</span>Weights are conditioned on intent</h2>
+  <table>
+    <tr><th>Query intent</th><th class="n">docs</th><th class="n">forum</th><th class="n">blog</th><th>why</th></tr>
+    <tr class="hi"><td>api_reference</td><td class="n win">1.00</td><td class="n">0.45</td><td class="n">0.35</td><td>one correct value; docs own it</td></tr>
+    <tr><td>how_to</td><td class="n">0.90</td><td class="n">0.70</td><td class="n">0.60</td><td>docs lead, community fills gaps</td></tr>
+    <tr class="hi"><td>troubleshooting</td><td class="n">0.65</td><td class="n win">1.00</td><td class="n">0.55</td><td>someone already hit this at 2am</td></tr>
+    <tr><td>conceptual</td><td class="n">0.70</td><td class="n">0.45</td><td class="n win">1.00</td><td>rationale lives in the blog</td></tr>
+    <tr><td>version_migration</td><td class="n">0.95</td><td class="n">0.70</td><td class="n">0.75</td><td>changelog + migration guide</td></tr>
+    <tr><td>opinion</td><td class="n">0.30</td><td class="n">0.85</td><td class="n">0.95</td><td>docs do not do trade-offs</td></tr>
+  </table>
+  <div class="sub">final score = <span class="mono">w[intent][source] &times; RRF &times; (1 + 0.3&middot;authority) &times; (1 + 0.5&middot;(recency&minus;1))</span></div>
+  <footer><span>3 &middot; Requirement 3 &mdash; intelligent weighing</span><span>config/default.yaml</span></footer>
+</section>
+
+<!-- 5 ------------------------------------------------------------------ -->
+<section class="slide" data-notes="[2:22-2:50, after demos 1-2] Not one lucky query. Adding the cross-encoder -- row five to row six -- is plus 0.167 nDCG, thirty percent relative, the largest jump in the table, for twenty-two milliseconds. It also lifts conflict detection from 0.29 to 0.71. Row seven trades four thousandths of nDCG for source recall 1.0 and detection 0.857.">
+  <h2><span class="num">4</span>Reranking earns its latency</h2>
+  <table>
+    <tr><th>#</th><th>Configuration</th><th class="n">nDCG@10</th><th class="n">MRR</th><th class="n">src recall</th><th class="n">conflict</th><th class="n">p50 ms</th></tr>
+    <tr><td>1</td><td>BM25 only</td><td class="n">0.554</td><td class="n">0.786</td><td class="n">0.679</td><td class="n">0.286</td><td class="n">4</td></tr>
+    <tr><td>3</td><td>Hybrid RRF</td><td class="n">0.527</td><td class="n">0.768</td><td class="n">0.679</td><td class="n">0.286</td><td class="n">4</td></tr>
+    <tr><td>5</td><td>+ context headers, query expansion</td><td class="n">0.556</td><td class="n">0.798</td><td class="n">0.679</td><td class="n">0.286</td><td class="n">5</td></tr>
+    <tr class="hi"><td>6</td><td>+ cross-encoder rerank</td><td class="n win">0.722</td><td class="n">0.881</td><td class="n">0.964</td><td class="n">0.714</td><td class="n">26</td></tr>
+    <tr class="hi"><td>7</td><td>+ MMR &amp; source caps <b>(default)</b></td><td class="n">0.718</td><td class="n">0.881</td><td class="n win">1.000</td><td class="n win">0.857</td><td class="n">27</td></tr>
+  </table>
+  <div class="sub">Row 5 &rarr; 6 is <b>+0.167 nDCG (+30% relative)</b> for 22 ms &mdash; the largest jump in the table.
+  Row 6 &rarr; 7 trades 0.004 nDCG (inside the CI) for the cross-source coverage requirement 5 depends on.</div>
+  <footer><span>4 &middot; Requirement 4 &mdash; reranking</span><span>mean gold displacement 3.6 positions</span></footer>
+</section>
+
+<!-- 6 ------------------------------------------------------------------ -->
+<section class="slide" data-notes="[2:50-3:08] Requirement five took most of the design effort. Claims are extracted as typed facts, pairs classified into eleven relationships, then a precedence cascade: version scoping, deprecation, empirical override, authority, recency -- or unresolved, disclosing both. Silent averaging is forbidden.   >> SWITCH TO TERMINAL: demos 3, 4, 5, 6">
+  <h2><span class="num">5</span>Contradictions: classify, then resolve</h2>
+  <div class="cards">
+    <div class="card"><div class="big">11</div><div class="lbl">relationship classes &mdash; agreement, complementary, version-scoped, deprecated, misconception, empirical override, contradiction&hellip;</div></div>
+    <div class="card b"><div class="big">6</div><div class="lbl">precedence rules, in order: version scoping &rarr; deprecation &rarr; empirical override &rarr; authority &rarr; recency &rarr; unresolved</div></div>
+    <div class="card g"><div class="big">0.857</div><div class="lbl">of planted conflicts detected (12 planted, 7 reachable in the gold set)</div></div>
+    <div class="card g"><div class="big">0.00</div><div class="lbl">false-positive rate &mdash; complementary pairs do <b>not</b> raise a warning</div></div>
+  </div>
+  <div class="sub"><b>Silent averaging is forbidden.</b> Every resolution is disclosed with the rule that fired, and an unresolved conflict
+  presents both claims and says so. A misconception is <b>named and corrected</b>, not quietly overwritten &mdash; the user may already believe it.</div>
+  <footer><span>5 &middot; Requirement 5 &mdash; contradictions</span><span>src/zephyr_rag/contradiction/</span></footer>
+</section>
+
+<!-- 7 ------------------------------------------------------------------ -->
+<section class="slide" data-notes="[reference slide -- covered by demo 6 narration at 4:06] Requirement six. One JSON record per query: intent, weights applied, candidate pool, per-chunk scores, rank before and after, which sources filled the final slots, every conflict with the rule that fired, citations, timings. Show this slide only if the live log demo is cut.">
+  <h2><span class="num">6</span>Every answer is auditable</h2>
+  <ul>
+    <li><b>One JSON record per query</b> &rarr; <span class="mono">logs/queries.jsonl</span></li>
+    <li>intent &middot; classifier &middot; <b>weights applied</b> &middot; candidate pool per source</li>
+    <li>per chunk: retrieval score &middot; CE score &middot; <b>rank before &rarr; after</b> &middot; authority &middot; recency</li>
+    <li><b>source_distribution</b> &mdash; which sources filled the final slots</li>
+    <li>every conflict: relationship &middot; confidence &middot; <b>rule fired</b> &middot; winner &middot; disclosed</li>
+    <li>citations with quoted spans &middot; refusal flag &middot; per-stage timings</li>
+  </ul>
+  <div class="sub">Plus <span class="mono">logs/chunks.jsonl</span> for the corpus side. <span class="mono">python scripts/show_log.py</span> is the human view of one record.</div>
+  <footer><span>6 &middot; Requirement 6 &mdash; logging</span><span>refusal accuracy 15/15</span></footer>
+</section>
+
+<!-- 8 ------------------------------------------------------------------ -->
+<section class="slide" data-notes="[4:22-4:48] Two results went against me. Hybrid fusion didn't beat BM25 alone -- synthetic passages reuse the question's vocabulary, which is BM25's best case. And uniform chunking scored HIGHER on nDCG, partly a chunk-size confound, but it lost a third of its conflict detection. So per-source chunking is justified by requirement five, not by nDCG. With fourteen queries my interval spans 0.19.">
+  <h2><span class="num">7</span>Two results that went against me</h2>
+  <div class="cards">
+    <div class="card r"><div class="big">&minus;0.026</div><div class="lbl"><b>Hybrid fusion lost to BM25 alone.</b> Synthetic passages share the question's vocabulary &mdash; BM25's best case &mdash; and LSA over 54 chunks is a thin latent space. Re-measure with real embeddings before generalising.</div></div>
+    <div class="card r"><div class="big">0.730<br><span style="font-size:.45em;color:var(--dim)">vs 0.718</span></div><div class="lbl"><b>Uniform chunking out-scored per-source on nDCG</b> &mdash; but recall is structurally inflated by chunk size, and it lost <span class="lose">a third of its conflict detection (0.857 &rarr; 0.571)</span>.</div></div>
+    <div class="card b"><div class="big">&plusmn;0.19</div><div class="lbl"><b>95% CI on nDCG@10 with n=14.</b> So I claim only the two effects bigger than the interval: reranking and score blending. Everything else is reported, not claimed.</div></div>
+  </div>
+  <div class="sub">A system optimising retrieval scores alone would pick the uniform splitter &mdash; and would then be unable to detect a third of its conflicts.</div>
+  <footer><span>7 &middot; Performance analysis</span><span>README &rarr; Results &amp; Benchmarks</span></footer>
+</section>
+
+<!-- 9 ------------------------------------------------------------------ -->
+<section class="slide" data-notes="[4:48-5:00] All six requirements covered, fifteen example queries with full traces, fifty-two tests passing, every number reproducible from one build command. Thanks for watching.">
+  <h2><span class="num">&check;</span>Requirements coverage</h2>
+  <table>
+    <tr><th>#</th><th>Requirement</th><th>Where</th><th class="n">Evidence</th></tr>
+    <tr><td>1</td><td>Three data types</td><td class="mono">data/{docs,forum,blog}</td><td class="n">13 &middot; 17 &middot; 8</td></tr>
+    <tr><td>2</td><td>Per-source chunking</td><td class="mono">chunking/</td><td class="n">3 chunkers, 54 chunks</td></tr>
+    <tr><td>3</td><td>Weighted multi-source retrieval</td><td class="mono">retrieval/</td><td class="n">source recall 1.000</td></tr>
+    <tr><td>4</td><td>Reranking</td><td class="mono">rerank/</td><td class="n">+0.167 nDCG</td></tr>
+    <tr><td>5</td><td>Contradiction handling</td><td class="mono">contradiction/</td><td class="n">0.857 det &middot; 0.00 FP</td></tr>
+    <tr><td>6</td><td>Source logging</td><td class="mono">observability/</td><td class="n">queries.jsonl</td></tr>
+    <tr class="hi"><td>+</td><td>Report &middot; performance analysis &middot; 15 example queries</td><td class="mono">README.md</td><td class="n">52 tests pass</td></tr>
+  </table>
+  <div class="sub">Stdlib-only core &middot; deterministic &middot; <span class="mono">pip install -e . &amp;&amp; python scripts/build_index.py</span> reproduces every number. Thank you.</div>
+  <footer><span>Thank you</span><span>Mrinal Bhardwaj</span></footer>
+</section>
+
+<div id="notes"></div>
+
+<script>
+var slides = Array.prototype.slice.call(document.querySelectorAll('.slide'));
+var i = 0, notesOn = false, t0 = null;
+var notes = document.getElementById('notes'), clock = document.getElementById('clock');
+
+function show(n){
+  i = Math.max(0, Math.min(slides.length - 1, n));
+  slides.forEach(function(s, k){ s.classList.toggle('on', k === i); });
+  notes.textContent = '(' + (i + 1) + '/' + slides.length + ')  ' + (slides[i].dataset.notes || '');
+}
+
+// Presenter timer: starts on the first advance, turns red past 5:00.
+setInterval(function(){
+  if (t0 === null) return;
+  var s = Math.floor((Date.now() - t0) / 1000);
+  clock.textContent = Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0') + ' / 5:00';
+  clock.className = s > 300 ? 'over' : 'run';
+}, 250);
+
+addEventListener('keydown', function(e){
+  if (['ArrowRight','ArrowDown',' ','PageDown','Enter'].indexOf(e.key) >= 0){
+    if (t0 === null) t0 = Date.now();
+    show(i + 1); e.preventDefault();
+  } else if (['ArrowLeft','ArrowUp','PageUp','Backspace'].indexOf(e.key) >= 0){
+    show(i - 1); e.preventDefault();
+  } else if (e.key === 'n' || e.key === 'N'){
+    notesOn = !notesOn; notes.classList.toggle('on', notesOn);
+  } else if (e.key === 'r' || e.key === 'R'){
+    t0 = Date.now();
+  } else if (e.key === 'f' || e.key === 'F'){
+    if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen();
+  } else if (e.key === 'Home'){ show(0); }
+  else if (e.key === 'End'){ show(slides.length - 1); }
+});
+addEventListener('click', function(){ if (t0 === null) t0 = Date.now(); show(i + 1); });
+show(0);
+</script>
+</body>
+</html>

@@ -1,0 +1,258 @@
+# =============================================================================
+# Multi-Source RAG -- full experiment configuration
+#
+# Every tunable parameter in the pipeline lives here. Nothing is hardcoded in
+# src/, which is what makes the ablation study in scripts/ablations.py a loop
+# over config variants rather than a series of code edits.
+#
+# Reproducibility: `seed` is applied globally (random, and numpy if installed)
+# by src/zephyr_rag/config.py at load time. Every number in README.md was
+# produced with this file unless the results table names a variant.
+#
+# Usage:
+#   python scripts/evaluate.py --config config/default.yaml
+#   python scripts/evaluate.py --config config/default.yaml --set rerank.alpha=0.5
+# =============================================================================
+
+experiment:
+  name: "default"
+  description: "Hybrid retrieval + intent weighting + cross-encoder rerank + contradiction handling"
+  seed: 42                      # global RNG seed -- crucial for reproducibility
+
+paths:
+  data_dir: "data"
+  docs_dir: "data/docs"
+  forum_file: "data/forum/threads.json"
+  blog_file: "data/blog/posts.json"
+  facts_file: "data/product_facts.json"
+  conflicts_file: "data/conflicts_planted.json"
+  gold_file: "data/gold_queries.yaml"
+  log_file: "logs/queries.jsonl"
+  chunk_dump: "logs/chunks.jsonl"
+  cache_dir: ".cache"
+
+# -----------------------------------------------------------------------------
+# Chunking -- one strategy per source (Requirement 2)
+# -----------------------------------------------------------------------------
+chunking:
+  strategy: "per_source"        # "per_source" | "uniform" (uniform = ablation control)
+
+  docs:                          # structure-aware: split on the heading tree
+    min_tokens: 120              # sections below this merge into their sibling/parent
+    max_tokens: 800              # above this, split at paragraph boundaries
+    split_overlap_sentences: 1
+    never_split_code_blocks: true
+    heading_levels: [2, 3]       # H2/H3 become chunk boundaries
+
+  forum:                         # thread-aware: question + ONE answer per chunk
+    pair_question_with_each_answer: true
+    min_votes_for_non_accepted: 3   # below this, non-accepted answers are dropped
+    include_op_followups: true       # confirmations carry corroboration signal
+    strip_quoted_replies: true       # '>' lines duplicate text and poison BM25
+    max_question_tokens: 180         # long questions are truncated, not dropped
+
+  blog:                          # semantic sliding window over narrative prose
+    window_tokens: 700
+    overlap_ratio: 0.15
+    split_on_sentences: true
+    semantic_split: false        # true = cut on embedding dissimilarity (ablation)
+    semantic_percentile: 25
+
+  uniform:                       # ABLATION CONTROL: the naive one-size splitter
+    chunk_tokens: 1000
+    overlap_tokens: 200
+
+  contextual:                    # context-header repair of severed context
+    enabled: true
+    include_version: true
+    include_date: true           # mandatory for blog: a post is a point-in-time snapshot
+    include_authority: true      # 'accepted answer by staff' etc.
+    llm_blurb: false             # true = per-chunk situating sentence via Claude Haiku
+
+# -----------------------------------------------------------------------------
+# Indexing
+# -----------------------------------------------------------------------------
+index:
+  per_source: true               # separate index per source -- defeats corpus-size bias
+
+  bm25:
+    enabled: true
+    k1: 1.5
+    b: 0.75
+
+  dense:
+    enabled: true
+    backend: "lsa"               # "lsa" (stdlib default) | "sentence_transformers" | "voyage"
+    dims: 256                    # LSA truncated-SVD rank
+    svd_iterations: 24           # power-iteration passes
+    min_df: 2                    # ignore terms appearing in fewer than N chunks
+    sublinear_tf: true
+    sentence_transformers_model: "BAAI/bge-m3"
+    voyage_model: "voyage-3-large"
+
+# -----------------------------------------------------------------------------
+# Retrieval (Requirement 3)
+# -----------------------------------------------------------------------------
+retrieval:
+  top_k_per_source: 20
+  candidate_pool: 60
+  min_per_source: 2              # HARD FLOOR. Without this, cross-source contradiction
+                                 # detection can never fire -- see README 'Pitfalls'.
+  rrf_k: 60                      # Reciprocal Rank Fusion constant
+
+  query_analysis:
+    backend: "rules"             # "rules" (deterministic) | "llm" (claude-opus-5)
+    expand_queries: true
+    max_expansions: 3
+    expansion_weight: 0.35      # expansion lists are down-weighted vs the original
+                                # query in RRF; at 1.0 breadth beats relevance
+    version_filter_is_hard: true # a named version prefilters, it does not merely down-weight
+
+  # Source weights by intent. Source reliability is NOT constant: docs win for
+  # reference lookups, forums for troubleshooting a specific failure, blogs for
+  # design rationale. Tuned on the gold set.
+  weights:
+    api_reference:     {docs: 1.00, forum: 0.45, blog: 0.35}
+    how_to:            {docs: 0.90, forum: 0.70, blog: 0.60}
+    troubleshooting:   {docs: 0.65, forum: 1.00, blog: 0.55}
+    conceptual:        {docs: 0.70, forum: 0.45, blog: 1.00}
+    version_migration: {docs: 0.95, forum: 0.70, blog: 0.75}
+    opinion:           {docs: 0.30, forum: 0.85, blog: 0.95}
+    unknown:           {docs: 0.85, forum: 0.70, blog: 0.70}
+
+  authority:
+    beta: 0.30                   # multiplier strength: score *= (1 + beta * authority)
+    docs_type_prior:   {reference: 1.00, api: 0.95, changelog: 0.90, guide: 0.80, tutorial: 0.65}
+    forum_accepted_weight: 0.50
+    forum_votes_weight: 0.30
+    forum_staff_weight: 0.20
+    forum_votes_saturation: 40   # votes are normalised against this ceiling
+    blog_staff_bonus: 1.00
+    blog_guest_bonus: 0.30
+
+  recency:
+    enabled: true
+    # Recency is applied as (1 + strength * (decay - 1)), NOT as a raw multiplier.
+    # RRF compresses relevance into a ~25% band while raw decay spans ~67%, so an
+    # unbounded recency multiplier overrides relevance instead of adjusting it.
+    # Measured: it pushed a chunk with a 4x lexical advantage from rank 1 to 6.
+    strength: 0.50
+    half_life_days: 400
+    floor: 0.60                  # never let age alone bury a canonical reference page
+    skip_for_intents: ["conceptual", "opinion"]   # good conceptual writing ages well
+    reference_date: "2026-10-01"  # fixed, not now() -- keeps metrics reproducible
+
+# -----------------------------------------------------------------------------
+# Reranking (Requirement 4)
+# -----------------------------------------------------------------------------
+rerank:
+  enabled: true
+  backend: "surrogate"           # "surrogate" (stdlib) | "cross_encoder" | "llm_listwise"
+  cross_encoder_model: "BAAI/bge-reranker-v2-m3"
+  rerank_top_n: 60               # candidates scored by the reranker
+  final_k: 8                     # chunks passed to the generator
+
+  # Blend, do not replace: the reranker scores topical relevance only and knows
+  # nothing about source weighting, authority, recency or version filters.
+  # alpha=1.0 discards all of Requirement 3.
+  alpha: 0.70
+  normalize_within_candidate_set: true   # never normalise globally across queries
+
+  mmr:
+    enabled: true
+    lambda: 0.70                 # relevance vs. novelty
+  caps:
+    max_per_source: 5            # of final_k -- guarantees multi-source synthesis
+    max_per_document: 3
+
+  llm_listwise:
+    model: "claude-opus-5"
+    top_n: 12
+    effort: "low"
+
+# -----------------------------------------------------------------------------
+# Contradiction handling (Requirement 5)
+# -----------------------------------------------------------------------------
+contradiction:
+  enabled: true
+  detector: "rules"              # "rules" (deterministic) | "llm" (claude-opus-5)
+
+  pair_selection:                # only compare pairs that could plausibly conflict
+    min_similarity: 0.60
+    require_shared_topic: true
+    cross_source_only: false     # false so docs-vs-docs drift (C5) is still caught
+    max_pairs: 12
+
+  # Precedence cascade, evaluated in order. Version scoping comes FIRST because
+  # most apparent conflicts in this corpus are two correct claims about
+  # different versions -- adjudicating those produces a wrong answer where a
+  # scoped one was available.
+  precedence:
+    - version_scoping
+    - explicit_deprecation
+    - empirical_override
+    - source_authority
+    - recency_within_tier
+    - unresolved
+
+  empirical_override:
+    min_independent_reports: 2   # distinct threads, not replies within one thread
+    applies_to_sources: ["forum"]
+    # Docs describe intended behaviour; users report observed behaviour. Multiple
+    # independent reports of observed behaviour surface as a known issue rather
+    # than being silently overruled by the docs.
+
+  source_authority_order:        # for canonical facts only (defaults, limits, signatures)
+    - "docs:changelog"
+    - "docs"
+    - "forum:staff"
+    - "blog:staff"
+    - "forum:accepted"
+    - "forum:high_votes"
+    - "blog:guest"
+    - "forum:low_votes"
+
+  disclosure:
+    always_disclose_unresolved: true
+    forbid_silent_averaging: true   # never emit "around 3 to 5" for 3 vs 5
+
+# -----------------------------------------------------------------------------
+# Generation
+# -----------------------------------------------------------------------------
+generation:
+  backend: "extractive"          # "extractive" (offline, deterministic) | "llm"
+  llm:
+    model: "claude-opus-5"
+    max_tokens: 2048
+    thinking: "adaptive"
+    effort: "high"
+    stream: true
+    use_citations: true          # span-level attribution via document blocks
+  refuse_below_score: 0.18        # absolute reranker score floor
+  refuse_above_unknown_ratio: 0.40  # query terms absent from the whole corpus
+  refuse_below_coverage: 0.34     # fraction of DISTINCTIVE query terms that must
+                                  # appear in retrieved text; the discriminating
+                                  # signal for out-of-scope queries       # out-of-scope queries must refuse, not hallucinate
+  max_context_chunks: 8
+
+# -----------------------------------------------------------------------------
+# Logging (Requirement 6)
+# -----------------------------------------------------------------------------
+logging:
+  enabled: true
+  level: "INFO"
+  trace_jsonl: true
+  log_chunk_scores: true
+  log_rank_changes: true         # rank_before/rank_after -- the reranker's evidence
+  log_conflicts: true
+  log_timings: true
+  log_token_usage: true
+
+# -----------------------------------------------------------------------------
+# Evaluation
+# -----------------------------------------------------------------------------
+evaluation:
+  k_values: [5, 10, 20]
+  primary_metric: "ndcg@10"
+  bootstrap_samples: 1000        # 95% CIs -- 15 queries gives wide intervals, say so
+  report_confidence_intervals: true
